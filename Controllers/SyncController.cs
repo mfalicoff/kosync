@@ -1,12 +1,11 @@
 using System;
-using System.Linq;
 using System.Security.Claims;
+using System.Threading.Tasks;
 using Kosync.Database;
 using Kosync.Database.Entities;
 using Kosync.Extensions;
 using Kosync.Models;
 using Kosync.Services;
-using LiteDB;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -15,7 +14,7 @@ using Microsoft.Extensions.Logging;
 namespace Kosync.Controllers;
 
 [ApiController]
-public class SyncController(ILogger<SyncController> logger, ProxyService proxyService, IPService ipService, KosyncDb db, IHttpContextAccessor contextAccessor)
+public class SyncController(ILogger<SyncController> logger, ProxyService proxyService, IPService ipService, IHttpContextAccessor contextAccessor, IKosyncRepository kosyncRepository)
     : ControllerBase
 {
     private readonly ILogger<SyncController> _logger = logger;
@@ -24,9 +23,9 @@ public class SyncController(ILogger<SyncController> logger, ProxyService proxySe
     
     private readonly IPService _ipService = ipService;
     
-    private readonly KosyncDb _db = db;
-    
     private readonly IHttpContextAccessor _contextAccessor = contextAccessor;
+    
+    private readonly IKosyncRepository _kosyncRepository = kosyncRepository;
     
     private ClaimsPrincipal UserPrincipal => _contextAccessor.HttpContext?.User ?? throw new InvalidOperationException("HttpContext is not available.");
     
@@ -60,7 +59,7 @@ public class SyncController(ILogger<SyncController> logger, ProxyService proxySe
 
     [AllowAnonymous]
     [HttpPost("/users/create")]
-    public ObjectResult CreateUser(UserCreateRequest payload)
+    public async Task<ObjectResult> CreateUser(UserCreateRequest payload)
     {
         if (Environment.GetEnvironmentVariable("REGISTRATION_DISABLED") == "true")
         {
@@ -70,10 +69,8 @@ public class SyncController(ILogger<SyncController> logger, ProxyService proxySe
                 message = "User registration is disabled"
             });
         }
+        UserDocument? existing = await _kosyncRepository.GetUserByUsernameAsync(payload.username);
 
-        ILiteCollection<User>? userCollection = _db.Context.GetCollection<User>("users");
-
-        User? existing = userCollection.FindOne(u => u.Username == payload.username);
         if (existing is not null)
         {
             LogInfo($"Account creation attempted with existing username - [{payload.username}].");
@@ -82,17 +79,15 @@ public class SyncController(ILogger<SyncController> logger, ProxyService proxySe
                 message = "User already exists"
             });
         }
-
-        var user = new User()
+        
+        await _kosyncRepository.CreateUserAsync(new UserDocument
         {
             Username = payload.username,
             PasswordHash = payload.password,
-        };
-
-        userCollection.Insert(user);
-        userCollection.EnsureIndex(u => u.Username);
-
-
+            IsAdministrator = false,
+            IsActive = true
+        });
+        
         LogInfo($"User [{payload.username}] created.");
         return StatusCode(201, new
         {
@@ -102,19 +97,13 @@ public class SyncController(ILogger<SyncController> logger, ProxyService proxySe
 
     [Authorize]
     [HttpPut("/syncs/progress")]
-    public ObjectResult SyncProgress(DocumentRequest payload)
+    public async Task<ObjectResult> SyncProgress(DocumentRequest payload)
     {
-        ILiteCollection<User>? userCollection = _db.Context.GetCollection<User>("users").Include(i => i.Documents);
-
-        User? user = userCollection.FindOne(i => i.Username == UserPrincipal.Username());
-
-        Document? document = user.Documents.SingleOrDefault(i => i.DocumentHash == payload.document);
-        if (document is null)
+        
+        DocumentProgress document = await _kosyncRepository.GetDocumentAsync(UserPrincipal.Username(), payload.document) ?? new DocumentProgress
         {
-            document = new Document();
-            document.DocumentHash = payload.document;
-            user.Documents.Add(document);
-        }
+            DocumentHash = payload.document
+        };
 
         document.Progress = payload.progress;
         document.Percentage = payload.percentage;
@@ -122,7 +111,7 @@ public class SyncController(ILogger<SyncController> logger, ProxyService proxySe
         document.DeviceId = payload.device_id;
         document.Timestamp = DateTime.UtcNow;
 
-        userCollection.Update(user);
+        await _kosyncRepository.AddOrUpdateDocumentAsync(UserPrincipal.Username(), document);
 
         LogInfo($"Received progress update for user [{UserPrincipal.Username()}] from device [{payload.device}] with document hash [{payload.document}].");
         return StatusCode(200, new
@@ -134,13 +123,9 @@ public class SyncController(ILogger<SyncController> logger, ProxyService proxySe
 
     [Authorize]
     [HttpGet("/syncs/progress/{documentHash}")]
-    public IActionResult GetProgress(string documentHash)
+    public async Task<IActionResult> GetProgress(string documentHash)
     {
-        ILiteCollection<User>? userCollection = _db.Context.GetCollection<User>("users").Include(i => i.Documents);
-
-        User? user = userCollection.FindOne(i => i.Username == UserPrincipal.Username());
-
-        Document? document = user.Documents.SingleOrDefault(i => i.DocumentHash == documentHash);
+        DocumentProgress? document = await _kosyncRepository.GetDocumentAsync(UserPrincipal.Username(), documentHash);
 
         if (document is null)
         {
