@@ -22,7 +22,7 @@ services:
     ports:
       - "3100:3100"
     environment:
-      MONGOKU_DEFAULT_HOST: "mongodb://admin:adminpassword@host.docker.internal:27017"
+      MONGOKU_DEFAULT_HOST: "mongodb://admin:adminpassword@mongodb:27017"
     depends_on:
       - mongodb
 

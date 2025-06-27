@@ -1,6 +1,10 @@
-﻿using Kosync.Auth;
+﻿using System;
+using System.Linq;
+using System.Net;
+using Kosync.Auth;
 using Kosync.Database;
 using Kosync.Database.Entities;
+using Kosync.Middleware;
 using Kosync.Services;
 using Microsoft.Extensions.DependencyInjection;
 using MongoDB.Driver;
@@ -39,15 +43,18 @@ public static class ServiceCollectionExtensions
                 AuthorizationPolicies.AdminOnly,
                 policy =>
                     policy
-                        .RequireRole(ClaimTypes.IsAdmin)
-                        .RequireClaim(ClaimTypes.Active, bool.TrueString.ToLowerInvariant())
+                        .RequireClaim(ClaimTypes.UserType, ClaimTypes.Admin)
+                        .RequireClaim(ClaimTypes.Active, bool.TrueString)
                         .AddAuthenticationSchemes(AuthenticationSchemes.KoReaderScheme.KoReader)
             );
 
         return services;
     }
-    
-    public static IServiceCollection AddMongoDb(this IServiceCollection services, MongoDbOptions options)
+
+    public static IServiceCollection AddMongoDb(
+        this IServiceCollection services,
+        MongoDbOptions options
+    )
     {
         services.AddSingleton<IMongoClient>(_ => new MongoClient(options.ConnectionString));
 
@@ -62,9 +69,35 @@ public static class ServiceCollectionExtensions
             IMongoDatabase database = serviceProvider.GetRequiredService<IMongoDatabase>();
             return database.GetCollection<UserDocument>(options.CollectionName);
         });
-        
+
         services.AddHostedService<MongoInitializerService>();
         services.AddTransient<IKosyncRepository, KosyncRepository>();
+        return services;
+    }
+
+    public static IServiceCollection AddIpDetection(
+        this IServiceCollection services,
+        Action<IpDetectionOptions>? configureOptions = null
+    )
+    {
+        services.Configure<IpDetectionOptions>(options =>
+        {
+            string? proxies = Environment.GetEnvironmentVariable("TRUSTED_PROXIES");
+            if (!string.IsNullOrEmpty(proxies))
+            {
+                string[] tempProxies = proxies.Split(
+                    ',',
+                    StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries
+                );
+                string[] validProxies = tempProxies
+                    .Where(p => IPAddress.TryParse(p, out _))
+                    .ToArray();
+                options.TrustedProxies = validProxies;
+            }
+
+            configureOptions?.Invoke(options);
+        });
+
         return services;
     }
 }
