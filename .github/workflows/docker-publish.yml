@@ -4,6 +4,10 @@ on:
   push:
     branches:
       - main
+    paths:
+        - 'Dockerfile'
+        - 'src/**'
+        - '.github/workflows/docker-publish.yml'
 
 env:
   REGISTRY: ghcr.io

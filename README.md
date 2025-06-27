@@ -4,27 +4,69 @@
 
 Users of KOReader can register a user on this synchronisation server and use the inbuilt _Progress sync_ plugin to keep all reading progress synchronised between devices.
 
-All data is stored inside a [LiteDB](https://www.litedb.org/) database file.
-
+All data is stored in a MongoDB database, which can be managed using the mongoku web interface. The server is designed to be self-hostable, allowing users to run their own instance of the sync server.
 ## How to run your own server?
 
 The recommendation is to use [Docker](https://www.docker.com/) with [Docker Compose](https://docs.docker.com/compose/).
 
 ```
-version: "3"
 services:
-  kosync:
-    container_name: kosync
-    image: ghcr.io/jberlyn/kosync-dotnet:latest
+  mongodb:
+    image: mongo:8.0
+    container_name: kosync-mongodb
     restart: unless-stopped
-    volumes:
-      - </path/to/data>:/app/data
+    ports:
+      - "27017:27017"
     environment:
-      - ASPNETCORE_HTTP_PORTS=8080
-      - ADMIN_PASSWORD=<super-strong-password>
-      - REGISTRATION_DISABLED=false
-      - TRUSTED_PROXIES=1.2.3.4, ::1
-    user: 1000:1000
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: adminpassword
+      MONGO_INITDB_DATABASE: KosyncDb
+    volumes:
+      - mongodb_data:/data/db
+      - mongodb_config:/data/configdb
+    networks:
+      - kosync-network
+
+  mongoku:
+    image: huggingface/mongoku:latest
+    container_name: kosync-mongoku
+    restart: unless-stopped
+    ports:
+      - "3100:3100"
+    environment:
+      MONGOKU_DEFAULT_HOST: "mongodb://admin:adminpassword@mongodb:27017"
+    depends_on:
+      - mongodb
+    networks:
+      - kosync-network
+
+  kosync-app:
+    build: .
+    image: kosync:latest
+    container_name: kosync-application
+    restart: unless-stopped
+    ports:
+      - "5000:8080"
+    environment:
+      MongoDB__ConnectionString: "mongodb://admin:adminpassword@mongodb:27017/KosyncDb?authSource=admin"
+      MongoDB__DatabaseName: "KosyncDb"
+      MongoDB__AdminPassword: "adminpassword"
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: "http://+:8080"
+    depends_on:
+      - mongodb
+    networks:
+      - kosync-network
+
+networks:
+  kosync-network:
+    driver: bridge
+
+volumes:
+  mongodb_data:
+    driver: local
+  mongodb_config:
+    driver: local
 ```
 
 `/app/data` will contain the database, which stores user and document progress information.
