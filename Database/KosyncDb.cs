@@ -18,9 +18,9 @@ public class KosyncDb
             adminPassword = "admin";
         }
 
-        var userCollection = Context.GetCollection<User>("users");
+        ILiteCollection<User>? userCollection = Context.GetCollection<User>("users");
 
-        var adminUser = userCollection.FindOne(i => i.Username == "admin");
+        User? adminUser = userCollection.FindOne(i => i.Username == "admin");
         if (adminUser is null)
         {
             adminUser = new User()

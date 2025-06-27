@@ -26,7 +26,7 @@ public class ManagementController(ILogger<ManagementController> logger, ProxySer
     [HttpGet("/manage/users")]
     public ObjectResult GetUsers()
     {
-        var userCollection = _db.Context.GetCollection<User>("users");
+        ILiteCollection<User>? userCollection = _db.Context.GetCollection<User>("users");
 
         var users = userCollection.FindAll().Select(i => new
         {
@@ -44,9 +44,9 @@ public class ManagementController(ILogger<ManagementController> logger, ProxySer
     [HttpPost("/manage/users")]
     public ObjectResult CreateUser(UserCreateRequest payload)
     {
-        var userCollection = _db.Context.GetCollection<User>("users");
+        ILiteCollection<User>? userCollection = _db.Context.GetCollection<User>("users");
 
-        var existingUser = userCollection.FindOne(i => i.Username == payload.username);
+        User? existingUser = userCollection.FindOne(i => i.Username == payload.username);
         if (existingUser is not null)
         {
             return StatusCode(400, new
@@ -77,9 +77,9 @@ public class ManagementController(ILogger<ManagementController> logger, ProxySer
     [HttpDelete("/manage/users")]
     public ObjectResult DeleteUser(string username)
     {
-        var userCollection = _db.Context.GetCollection<User>("users");
+        ILiteCollection<User>? userCollection = _db.Context.GetCollection<User>("users");
 
-        var user = userCollection.FindOne(u => u.Username == username);
+        User? user = userCollection.FindOne(u => u.Username == username);
 
         if (user is null)
         {
@@ -106,9 +106,9 @@ public class ManagementController(ILogger<ManagementController> logger, ProxySer
     {
         LogInfo($"User [{username}]'s documents requested by [{UserPrincipal.Username()}]");
 
-        var userCollection = _db.Context.GetCollection<User>("users");
+        ILiteCollection<User>? userCollection = _db.Context.GetCollection<User>("users");
 
-        var user = userCollection.FindOne(i => i.Username == username);
+        User? user = userCollection.FindOne(i => i.Username == username);
         if (user is null)
         {
             return StatusCode(400, new
@@ -123,11 +123,11 @@ public class ManagementController(ILogger<ManagementController> logger, ProxySer
     [HttpDelete("/manage/users/documents")]
     public ObjectResult DeleteUserDocument(string username, string documentHash)
     {
-        var userCollection = _db.Context.GetCollection<User>("users").Include(i => i.Documents);
+        ILiteCollection<User>? userCollection = _db.Context.GetCollection<User>("users").Include(i => i.Documents);
 
-        var user = userCollection.FindOne(i => i.Username == username);
+        User? user = userCollection.FindOne(i => i.Username == username);
 
-        var document = user.Documents.SingleOrDefault(i => i.DocumentHash == documentHash);
+        Document? document = user.Documents.SingleOrDefault(i => i.DocumentHash == documentHash);
 
         if (document is null)
         {
@@ -162,9 +162,9 @@ public class ManagementController(ILogger<ManagementController> logger, ProxySer
             });
         }
 
-        var userCollection = _db.Context.GetCollection<User>("users");
+        ILiteCollection<User>? userCollection = _db.Context.GetCollection<User>("users");
 
-        var user = userCollection.FindOne(i => i.Username == username);
+        User? user = userCollection.FindOne(i => i.Username == username);
         if (user is null)
         {
             LogInfo($"PUT request to /manage/users/active received from [{UserPrincipal.Username()}] but target username [{username}] does not exist.");
@@ -207,9 +207,9 @@ public class ManagementController(ILogger<ManagementController> logger, ProxySer
             });
         }
 
-        var userCollection = _db.Context.GetCollection<User>("users");
+        ILiteCollection<User>? userCollection = _db.Context.GetCollection<User>("users");
 
-        var user = userCollection.FindOne(i => i.Username == username);
+        User? user = userCollection.FindOne(i => i.Username == username);
         if (user is null)
         {
             LogWarning($"Password change request received from [{UserPrincipal.Username()}] but target username [{username}] does not exist.");
