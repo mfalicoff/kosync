@@ -1,6 +1,13 @@
-﻿using System.Security.Claims;
+﻿using System.Collections.Generic;
+using System.Linq;
+using System.Security.Claims;
 using System.Text.Encodings.Web;
+using System.Threading.Tasks;
+using Kosync.Database;
+using Kosync.Database.Entities;
+using LiteDB;
 using Microsoft.AspNetCore.Authentication;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 namespace Kosync.Auth;
 

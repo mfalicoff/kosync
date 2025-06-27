@@ -1,3 +1,6 @@
+using System;
+using Kosync.Database.Entities;
+using LiteDB;
 namespace Kosync.Database;
 
 public class KosyncDb

@@ -1,3 +1,4 @@
+using System;
 namespace Kosync.Database.Entities;
 
 public class Document

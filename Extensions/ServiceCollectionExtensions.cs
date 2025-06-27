@@ -1,4 +1,5 @@
 ﻿using Kosync.Auth;
+using Microsoft.Extensions.DependencyInjection;
 using AuthenticationSchemes = Kosync.Auth.AuthenticationSchemes;
 
 namespace Kosync.Extensions;

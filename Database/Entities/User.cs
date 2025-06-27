@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 namespace Kosync.Database.Entities;
 
 public class User

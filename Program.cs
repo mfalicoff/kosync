@@ -1,4 +1,10 @@
+using System;
+using Kosync.Database;
 using Kosync.Extensions;
+using Kosync.Services;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
