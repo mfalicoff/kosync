@@ -1,33 +1,34 @@
+using System.Security.Claims;
+using Kosync.Extensions;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Kosync.Controllers;
 
 [ApiController]
-public class SyncController : ControllerBase
+public class SyncController(ILogger<SyncController> logger, ProxyService proxyService, IPService ipService, KosyncDb db, IHttpContextAccessor contextAccessor)
+    : ControllerBase
 {
-    private ILogger<SyncController> _logger;
+    private readonly ILogger<SyncController> _logger = logger;
 
-    private ProxyService _proxyService;
-    private IPService _ipService;
-    private KosyncDb _db;
-    private UserService _userService;
-
-
-    public SyncController(ILogger<SyncController> logger, ProxyService proxyService, IPService ipService, KosyncDb db, UserService userService)
-    {
-        _logger = logger;
-        _proxyService = proxyService;
-        _ipService = ipService;
-        _db = db;
-        _userService = userService;
-    }
-
+    private readonly ProxyService _proxyService = proxyService;
+    
+    private readonly IPService _ipService = ipService;
+    
+    private readonly KosyncDb _db = db;
+    
+    private readonly IHttpContextAccessor _contextAccessor = contextAccessor;
+    
+    private ClaimsPrincipal UserPrincipal => _contextAccessor.HttpContext?.User ?? throw new InvalidOperationException("HttpContext is not available.");
+    
+    [AllowAnonymous]
     [HttpGet("/")]
     public IActionResult Index()
     {
         return Ok("kosync-dotnet server is running.");
     }
 
+    [AllowAnonymous]
     [HttpGet("/healthcheck")]
     public ObjectResult HealthCheck()
     {
@@ -37,49 +38,18 @@ public class SyncController : ControllerBase
         });
     }
 
+    [Authorize]
     [HttpGet("/users/auth")]
     public ObjectResult AuthoriseUser()
     {
-        string? username = Request.Headers["x-auth-user"];
-        string? passwordHash = Request.Headers["x-auth-key"];
-
-        if (username is null || passwordHash is null)
-        {
-            LogWarning("Request to /users/auth without credentials");
-
-            return StatusCode(401, new
-            {
-                message = "Invalid credentials"
-            });
-        }
-
-        if (!_userService.IsAuthenticated)
-        {
-            LogWarning($"Login to [{username}] attempted with invalid credentials.");
-
-            return StatusCode(401, new
-            {
-                message = "User could not be found"
-            });
-        }
-
-        if (!_userService.IsActive)
-        {
-            LogWarning($"Login to inactive account [{username}] attempted.");
-
-            return StatusCode(401, new
-            {
-                message = "User is inactive"
-            });
-        }
-
-        LogInfo($"User [{username}] logged in.");
+        LogInfo($"User [{UserPrincipal.Username()}] logged in.");
         return StatusCode(200, new
         {
-            username = _userService.Username
+            username = UserPrincipal.Username()
         });
     }
 
+    [AllowAnonymous]
     [HttpPost("/users/create")]
     public ObjectResult CreateUser(UserCreateRequest payload)
     {
@@ -92,9 +62,9 @@ public class SyncController : ControllerBase
             });
         }
 
-        var userCollection = _db.Context.GetCollection<User>("users");
+        ILiteCollection<User>? userCollection = _db.Context.GetCollection<User>("users");
 
-        var existing = userCollection.FindOne(u => u.Username == payload.username);
+        User? existing = userCollection.FindOne(u => u.Username == payload.username);
         if (existing is not null)
         {
             LogInfo($"Account creation attempted with existing username - [{payload.username}].");
@@ -117,45 +87,19 @@ public class SyncController : ControllerBase
         LogInfo($"User [{payload.username}] created.");
         return StatusCode(201, new
         {
-            username = payload.username
+            Username = payload.username
         });
     }
 
+    [Authorize]
     [HttpPut("/syncs/progress")]
     public ObjectResult SyncProgress(DocumentRequest payload)
     {
-        if (!_userService.IsAuthenticated)
-        {
-            if (string.IsNullOrEmpty(_userService.Username))
-            {
-                LogWarning("Unauthenticated progress update received.");
-            }
-            else
-            {
-                LogWarning($"Unauthenticated progress update for user [{_userService.Username}] received.");
-            }
+        ILiteCollection<User>? userCollection = _db.Context.GetCollection<User>("users").Include(i => i.Documents);
 
-            return StatusCode(401, new
-            {
-                message = "Unauthorized"
-            });
-        }
+        User? user = userCollection.FindOne(i => i.Username == UserPrincipal.Username());
 
-        if (!_userService.IsActive)
-        {
-            LogWarning($"Progress update from inactive user [{_userService.Username}] received.");
-
-            return StatusCode(401, new
-            {
-                message = "Unauthorized"
-            });
-        }
-
-        var userCollection = _db.Context.GetCollection<User>("users").Include(i => i.Documents);
-
-        var user = userCollection.FindOne(i => i.Username == _userService.Username);
-
-        var document = user.Documents.SingleOrDefault(i => i.DocumentHash == payload.document);
+        Document? document = user.Documents.SingleOrDefault(i => i.DocumentHash == payload.document);
         if (document is null)
         {
             document = new Document();
@@ -171,7 +115,7 @@ public class SyncController : ControllerBase
 
         userCollection.Update(user);
 
-        LogInfo($"Received progress update for user [{_userService.Username}] from device [{payload.device}] with document hash [{payload.document}].");
+        LogInfo($"Received progress update for user [{UserPrincipal.Username()}] from device [{payload.device}] with document hash [{payload.document}].");
         return StatusCode(200, new
         {
             document = document.DocumentHash,
@@ -179,52 +123,26 @@ public class SyncController : ControllerBase
         });
     }
 
+    [Authorize]
     [HttpGet("/syncs/progress/{documentHash}")]
     public IActionResult GetProgress(string documentHash)
     {
-        if (!_userService.IsAuthenticated)
-        {
-            if (string.IsNullOrEmpty(_userService.Username))
-            {
-                LogWarning("Unauthenticated progress request received.");
-            }
-            else
-            {
-                LogWarning($"Unauthenticated progress request for user [{_userService.Username}] received.");
-            }
+        ILiteCollection<User>? userCollection = _db.Context.GetCollection<User>("users").Include(i => i.Documents);
 
-            return StatusCode(401, new
-            {
-                message = "Unauthorized"
-            });
-        }
+        User? user = userCollection.FindOne(i => i.Username == UserPrincipal.Username());
 
-        if (!_userService.IsActive)
-        {
-            LogWarning($"Progress request from inactive user [{_userService.Username}] received.");
-
-            return StatusCode(401, new
-            {
-                message = "Unauthorized"
-            });
-        }
-
-        var userCollection = _db.Context.GetCollection<User>("users").Include(i => i.Documents);
-
-        var user = userCollection.FindOne(i => i.Username == _userService.Username);
-
-        var document = user.Documents.SingleOrDefault(i => i.DocumentHash == documentHash);
+        Document? document = user.Documents.SingleOrDefault(i => i.DocumentHash == documentHash);
 
         if (document is null)
         {
-            LogInfo($"Document hash [{documentHash}] not found for user [{_userService.Username}].");
+            LogInfo($"Document hash [{documentHash}] not found for user [{UserPrincipal.Username()}].");
             return StatusCode(502, new
             {
                 message = "Document not found on server"
             });
         }
 
-        LogInfo($"Received progress request for user [{_userService.Username}] with document hash [{documentHash}].");
+        LogInfo($"Received progress request for user [{UserPrincipal.Username()}] with document hash [{documentHash}].");
 
         var time = new DateTimeOffset(document.Timestamp);
 
