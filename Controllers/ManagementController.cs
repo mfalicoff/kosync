@@ -1,68 +1,31 @@
+using System.Security.Claims;
+using Kosync.Auth;
+using Kosync.Extensions;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Kosync.Controllers;
 
 [ApiController]
-public class ManagementController : ControllerBase
+[Authorize(Policy = AuthorizationPolicies.AdminOnly)]
+public class ManagementController(ILogger<ManagementController> logger, ProxyService proxyService, IPService ipService, KosyncDb db, IHttpContextAccessor contextAccessor)
+    : ControllerBase
 {
-    private ILogger<ManagementController> _logger;
+    private readonly ILogger<ManagementController> _logger = logger;
 
-    private ProxyService _proxyService;
-    private IPService _ipService;
-    private KosyncDb _db;
-    private UserService _userService;
+    private readonly ProxyService _proxyService = proxyService;
+    
+    private readonly IPService _ipService = ipService;
+    
+    private readonly KosyncDb _db = db;
 
+    private readonly IHttpContextAccessor _contextAccessor = contextAccessor;
 
-    public ManagementController(ILogger<ManagementController> logger, ProxyService proxyService, IPService ipService, KosyncDb db, UserService userService)
-    {
-        _logger = logger;
-        _proxyService = proxyService;
-        _ipService = ipService;
-        _db = db;
-        _userService = userService;
-    }
-
+    private ClaimsPrincipal UserPrincipal => _contextAccessor.HttpContext?.User ?? throw new InvalidOperationException("HttpContext is not available.");
+    
     [HttpGet("/manage/users")]
     public ObjectResult GetUsers()
     {
-        if (!_userService.IsAuthenticated)
-        {
-            if (string.IsNullOrEmpty(_userService.Username))
-            {
-                LogWarning("Unauthenticated GET request to /manage/users.");
-            }
-            else
-            {
-                LogWarning($"Unauthenticated GET request to /manage/users with username [{_userService.Username}].");
-            }
-
-            return StatusCode(401, new
-            {
-                message = "Unauthorized"
-            });
-        }
-
-        if (!_userService.IsAdmin)
-        {
-            LogWarning($"Unauthorized GET request to /manage/users from user [{_userService.Username}].");
-
-            return StatusCode(401, new
-            {
-                message = "Unauthorized"
-            });
-        }
-
-        if (!_userService.IsActive)
-        {
-            LogWarning($"GET request to /manage/users received from inactive user [{_userService.Username}].");
-
-            return StatusCode(401, new
-            {
-                message = "Unauthorized"
-            });
-        }
-
-
         var userCollection = _db.Context.GetCollection<User>("users");
 
         var users = userCollection.FindAll().Select(i => new
@@ -74,50 +37,13 @@ public class ManagementController : ControllerBase
             documentCount = i.Documents.Count()
         });
 
-        LogInfo($"User [{_userService.Username}] requested /manage/users");
+        LogInfo($"User [{UserPrincipal.Username()}] requested /manage/users");
         return StatusCode(200, users);
     }
 
     [HttpPost("/manage/users")]
     public ObjectResult CreateUser(UserCreateRequest payload)
     {
-        if (!_userService.IsAuthenticated)
-        {
-            if (string.IsNullOrEmpty(_userService.Username))
-            {
-                LogWarning("Unauthenticated POST request to /manage/users.");
-            }
-            else
-            {
-                LogWarning($"Unauthenticated POST request to /manage/users with username [{_userService.Username}].");
-            }
-
-            return StatusCode(401, new
-            {
-                message = "Unauthorized"
-            });
-        }
-
-        if (!_userService.IsAdmin)
-        {
-            LogWarning($"Unauthorized POST request to /manage/users from user [{_userService.Username}].");
-
-            return StatusCode(401, new
-            {
-                message = "Unauthorized"
-            });
-        }
-
-        if (!_userService.IsActive)
-        {
-            LogWarning($"POST request to /manage/users received from inactive user [{_userService.Username}].");
-
-            return StatusCode(401, new
-            {
-                message = "Unauthorized"
-            });
-        }
-
         var userCollection = _db.Context.GetCollection<User>("users");
 
         var existingUser = userCollection.FindOne(i => i.Username == payload.username);
@@ -141,7 +67,7 @@ public class ManagementController : ControllerBase
         userCollection.Insert(user);
         userCollection.EnsureIndex(u => u.Username);
 
-        LogInfo($"User [{payload.username}] created by user [{_userService.Username}]");
+        LogInfo($"User [{payload.username}] created by user [{UserPrincipal.Username()}]");
         return StatusCode(200, new
         {
             message = "User created successfully"
@@ -151,53 +77,13 @@ public class ManagementController : ControllerBase
     [HttpDelete("/manage/users")]
     public ObjectResult DeleteUser(string username)
     {
-        if (!_userService.IsAuthenticated)
-        {
-            if (string.IsNullOrEmpty(_userService.Username))
-            {
-                LogWarning("Unauthenticated DELETE request to /manage/users.");
-            }
-            else
-            {
-                LogWarning($"Unauthenticated DELETE request to /manage/users with username [{_userService.Username}].");
-            }
-
-            return StatusCode(401, new
-            {
-                message = "Unauthorized"
-            });
-        }
-
-
-        if (!_userService.IsAdmin &&
-            !username.Equals(_userService.Username, StringComparison.OrdinalIgnoreCase))
-        // allow a user to delete their own account
-        {
-            LogWarning($"Unauthorized DELETE request to /manage/users from user [{_userService.Username}].");
-
-            return StatusCode(401, new
-            {
-                message = "Unauthorized"
-            });
-        }
-
-        if (!_userService.IsActive)
-        {
-            LogWarning($"DELETE request to /manage/users from inactive user [{_userService.Username}].");
-
-            return StatusCode(401, new
-            {
-                message = "Unauthorized"
-            });
-        }
-
         var userCollection = _db.Context.GetCollection<User>("users");
 
         var user = userCollection.FindOne(u => u.Username == username);
 
         if (user is null)
         {
-            LogInfo($"DELETE request to /manage/users received from [{_userService.Username}] but target username [{username}] does not exist.");
+            LogInfo($"DELETE request to /manage/users received from [{UserPrincipal.Username()}] but target username [{username}] does not exist.");
 
             return StatusCode(404, new
             {
@@ -207,7 +93,7 @@ public class ManagementController : ControllerBase
 
         userCollection.Delete(user.Id);
 
-        LogInfo($"User [{username}] has been deleted by [{_userService.Username}]");
+        LogInfo($"User [{username}] has been deleted by [{UserPrincipal.Username()}]");
 
         return StatusCode(200, new
         {
@@ -218,47 +104,7 @@ public class ManagementController : ControllerBase
     [HttpGet("/manage/users/documents")]
     public ObjectResult GetDocuments(string username)
     {
-        if (!_userService.IsAuthenticated)
-        {
-            if (string.IsNullOrEmpty(_userService.Username))
-            {
-                LogWarning("Unauthenticated GET request to /manage/users/documents.");
-            }
-            else
-            {
-                LogWarning($"Unauthenticated GET request to /manage/users/documents with username [{_userService.Username}].");
-            }
-
-            return StatusCode(401, new
-            {
-                message = "Unauthorized"
-            });
-        }
-
-
-        if (!_userService.IsAdmin &&
-            !username.Equals(_userService.Username, StringComparison.OrdinalIgnoreCase))
-            // allow a user to request their own docs
-        {
-            LogWarning($"Unauthorized GET request to /manage/users/documents from user [{_userService.Username}].");
-
-            return StatusCode(401, new
-            {
-                message = "Unauthorized"
-            });
-        }
-
-        if (!_userService.IsActive)
-        {
-            LogWarning($"GET request to /manage/users/documents received from inactive user [{_userService.Username}].");
-
-            return StatusCode(401, new
-            {
-                message = "Unauthorized"
-            });
-        }
-
-        LogInfo($"User [{username}]'s documents requested by [{_userService.Username}]");
+        LogInfo($"User [{username}]'s documents requested by [{UserPrincipal.Username()}]");
 
         var userCollection = _db.Context.GetCollection<User>("users");
 
@@ -277,44 +123,6 @@ public class ManagementController : ControllerBase
     [HttpDelete("/manage/users/documents")]
     public ObjectResult DeleteUserDocument(string username, string documentHash)
     {
-        if (!_userService.IsAuthenticated)
-        {
-            if (string.IsNullOrEmpty(_userService.Username))
-            {
-                LogWarning("Unauthenticated DELETE request to /manage/users/documents.");
-            }
-            else
-            {
-                LogWarning($"Unauthenticated DELETE request to /manage/users/documents with username [{_userService.Username}].");
-            }
-
-            return StatusCode(401, new
-            {
-                message = "Unauthorized"
-            });
-        }
-
-        if (!_userService.IsAdmin &&
-            !username.Equals(_userService.Username, StringComparison.OrdinalIgnoreCase))
-        {
-            LogWarning($"Unauthorized DELETE request to /manage/users/documents from user [{_userService.Username}].");
-
-            return StatusCode(401, new
-            {
-                message = "Unauthorized"
-            });
-        }
-
-        if (!_userService.IsActive)
-        {
-            LogWarning($"DELETE request to /manage/users/documents from inactive user [{_userService.Username}].");
-
-            return StatusCode(401, new
-            {
-                message = "Unauthorized"
-            });
-        }
-
         var userCollection = _db.Context.GetCollection<User>("users").Include(i => i.Documents);
 
         var user = userCollection.FindOne(i => i.Username == username);
@@ -333,7 +141,7 @@ public class ManagementController : ControllerBase
 
         userCollection.Update(user);
 
-        LogInfo($"User [{_userService.Username}] deleted document with hash [{documentHash}] for user [{username}].");
+        LogInfo($"User [{UserPrincipal.Username()}] deleted document with hash [{documentHash}] for user [{username}].");
 
         return StatusCode(200, new
         {
@@ -344,46 +152,9 @@ public class ManagementController : ControllerBase
     [HttpPut("/manage/users/active")]
     public ObjectResult UpdateUserActive(string username)
     {
-        if (!_userService.IsAuthenticated)
-        {
-            if (string.IsNullOrEmpty(_userService.Username))
-            {
-                LogWarning("Unauthenticated PUT request to /manage/users/active.");
-            }
-            else
-            {
-                LogWarning($"Unauthenticated PUT request to /manage/users/active with username [{_userService.Username}].");
-            }
-
-            return StatusCode(401, new
-            {
-                message = "Unauthorized"
-            });
-        }
-
-        if (!_userService.IsAdmin)
-        {
-            LogWarning($"Unauthorized PUT request to /manage/users/active from user [{_userService.Username}].");
-
-            return StatusCode(401, new
-            {
-                message = "Unauthorized"
-            });
-        }
-
-        if (!_userService.IsActive)
-        {
-            LogWarning($"PUT request to /manage/users/active received from inactive user [{_userService.Username}].");
-
-            return StatusCode(401, new
-            {
-                message = "Unauthorized"
-            });
-        }
-
         if (username == "admin")
         {
-            LogWarning($"Attempt to toggle admin user active from user [{_userService.Username}].");
+            LogWarning($"Attempt to toggle admin user active from user [{UserPrincipal.Username()}].");
 
             return StatusCode(400, new
             {
@@ -396,7 +167,7 @@ public class ManagementController : ControllerBase
         var user = userCollection.FindOne(i => i.Username == username);
         if (user is null)
         {
-            LogInfo($"PUT request to /manage/users/active received from [{_userService.Username}] but target username [{username}] does not exist.");
+            LogInfo($"PUT request to /manage/users/active received from [{UserPrincipal.Username()}] but target username [{username}] does not exist.");
 
             return StatusCode(400, new
             {
@@ -407,7 +178,7 @@ public class ManagementController : ControllerBase
         user.IsActive = !user.IsActive;
         userCollection.Update(user);
 
-        LogInfo($"User [{username}] set to {(user.IsActive ? "active" : "inactive")} by user [{_userService.Username}]");
+        LogInfo($"User [{username}] set to {(user.IsActive ? "active" : "inactive")} by user [{UserPrincipal.Username()}]");
 
         return StatusCode(200, new
         {
@@ -418,43 +189,6 @@ public class ManagementController : ControllerBase
     [HttpPut("/manage/users/password")]
     public ObjectResult UpdatePassword(string username, PasswordChangeRequest payload)
     {
-        if (!_userService.IsAuthenticated)
-        {
-            if (string.IsNullOrEmpty(_userService.Username))
-            {
-                LogWarning("Unauthenticated PUT request to /manage/users/password.");
-            }
-            else
-            {
-                LogWarning($"Unauthenticated PUT request to /manage/users/password with username [{_userService.Username}].");
-            }
-
-            return StatusCode(401, new
-            {
-                message = "Unauthorized"
-            });
-        }
-
-        if (!_userService.IsAdmin)
-        {
-            LogWarning($"Unauthorized PUT request to /manage/users/password from user [{_userService.Username}].");
-
-            return StatusCode(401, new
-            {
-                message = "Unauthorized"
-            });
-        }
-
-        if (!_userService.IsActive)
-        {
-            LogWarning($"PUT request to /manage/users/password received from inactive user [{_userService.Username}].");
-
-            return StatusCode(401, new
-            {
-                message = "Unauthorized"
-            });
-        }
-
         // KOReader will literally not attempt to log in with a blank password field or with just whitespace
         if (string.IsNullOrWhiteSpace(payload.password))
         {
@@ -466,7 +200,7 @@ public class ManagementController : ControllerBase
 
         if (username == "admin")
         {
-            LogWarning($"Attempt to change admin password from user [{_userService.Username}].");
+            LogWarning($"Attempt to change admin password from user [{UserPrincipal.Username()}].");
             return StatusCode(400, new
             {
                 message = "Cannot update admin user"
@@ -478,7 +212,7 @@ public class ManagementController : ControllerBase
         var user = userCollection.FindOne(i => i.Username == username);
         if (user is null)
         {
-            LogWarning($"Password change request received from [{_userService.Username}] but target username [{username}] does not exist.");
+            LogWarning($"Password change request received from [{UserPrincipal.Username()}] but target username [{username}] does not exist.");
             return StatusCode(400, new
             {
                 message = "User does not exist"
@@ -488,7 +222,7 @@ public class ManagementController : ControllerBase
         user.PasswordHash = Utility.HashPassword(payload.password);
         userCollection.Update(user);
 
-        LogInfo($"User [{username}]'s password updated by [{_userService.Username}].");
+        LogInfo($"User [{username}]'s password updated by [{UserPrincipal.Username()}].");
         return StatusCode(200, new
         {
             message = "Password changed successfully"
