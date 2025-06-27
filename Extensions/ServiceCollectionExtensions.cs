@@ -1,5 +1,9 @@
 ﻿using Kosync.Auth;
+using Kosync.Database;
+using Kosync.Database.Entities;
+using Kosync.Services;
 using Microsoft.Extensions.DependencyInjection;
+using MongoDB.Driver;
 using AuthenticationSchemes = Kosync.Auth.AuthenticationSchemes;
 
 namespace Kosync.Extensions;
@@ -40,6 +44,27 @@ public static class ServiceCollectionExtensions
                         .AddAuthenticationSchemes(AuthenticationSchemes.KoReaderScheme.KoReader)
             );
 
+        return services;
+    }
+    
+    public static IServiceCollection AddMongoDb(this IServiceCollection services, MongoDbOptions options)
+    {
+        services.AddSingleton<IMongoClient>(_ => new MongoClient(options.ConnectionString));
+
+        services.AddSingleton<IMongoDatabase>(serviceProvider =>
+        {
+            IMongoClient client = serviceProvider.GetRequiredService<IMongoClient>();
+            return client.GetDatabase(options.DatabaseName);
+        });
+
+        services.AddSingleton<IMongoCollection<UserDocument>>(serviceProvider =>
+        {
+            IMongoDatabase database = serviceProvider.GetRequiredService<IMongoDatabase>();
+            return database.GetCollection<UserDocument>(options.CollectionName);
+        });
+        
+        services.AddHostedService<MongoInitializerService>();
+        services.AddTransient<IKosyncRepository, KosyncRepository>();
         return services;
     }
 }

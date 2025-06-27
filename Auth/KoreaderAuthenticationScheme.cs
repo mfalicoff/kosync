@@ -5,7 +5,6 @@ using System.Text.Encodings.Web;
 using System.Threading.Tasks;
 using Kosync.Database;
 using Kosync.Database.Entities;
-using LiteDB;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -21,17 +20,17 @@ public class KoReaderAuthenticationHandler(
     IOptionsMonitor<KoReaderAuthenticationSchemeOptions> options,
     ILoggerFactory logger,
     UrlEncoder encoder,
-    KosyncDb db)
+    IKosyncRepository kosyncRepository)
     : AuthenticationHandler<KoReaderAuthenticationSchemeOptions>(options, logger, encoder)
 {
-    private readonly KosyncDb _db = db;
-
-    protected override Task<AuthenticateResult> HandleAuthenticateAsync()
+    private readonly IKosyncRepository _kosyncRepository = kosyncRepository;
+    
+    protected override async Task<AuthenticateResult> HandleAuthenticateAsync()
     {
         if (!Request.Headers.ContainsKey(Options.AuthHeaderName) || 
             !Request.Headers.ContainsKey(Options.PasswordHeaderName))
         {
-            return Task.FromResult(AuthenticateResult.Fail("Missing authentication headers"));
+            return AuthenticateResult.Fail("Missing authentication headers");
         }
 
         var username = Request.Headers[Options.AuthHeaderName].FirstOrDefault();
@@ -39,21 +38,19 @@ public class KoReaderAuthenticationHandler(
 
         if (string.IsNullOrEmpty(username) || string.IsNullOrEmpty(password))
         {
-            return Task.FromResult(AuthenticateResult.Fail("Invalid authentication headers"));
+            return AuthenticateResult.Fail("Invalid authentication headers");
         }
-
-        ILiteCollection<User>? userCollection = _db.Context.GetCollection<User>("users");
-        User? user = userCollection.FindOne(i => i.Username == username && i.PasswordHash == password);
         
-        if (user == null)
+        UserDocument? user = await _kosyncRepository.GetUserByUsernameAsync(username);
+        
+        if (user == null || user.PasswordHash != password)
         {
-            return Task.FromResult(AuthenticateResult.Fail("Invalid credentials"));
+            return AuthenticateResult.Fail("Invalid credentials");
         }
 
         List<Claim> claims =
         [
             new(ClaimTypes.Name, user.Username),
-            new(ClaimTypes.Id, user.Id.ToString()),
             new(ClaimTypes.Active, user.IsActive.ToString()),
             new(ClaimTypes.IsAdmin, user.IsAdministrator.ToString()),
 
@@ -63,6 +60,6 @@ public class KoReaderAuthenticationHandler(
         var principal = new ClaimsPrincipal(identity);
         var ticket = new AuthenticationTicket(principal, Scheme.Name);
 
-        return Task.FromResult(AuthenticateResult.Success(ticket));
+        return AuthenticateResult.Success(ticket);
     }
 }
