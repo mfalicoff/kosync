@@ -9,4 +9,9 @@
     <PackageReference Include="MongoDB.Driver" />
     <PackageReference Include="Scalar.AspNetCore" />
   </ItemGroup>
+  <ItemGroup>
+    <Content Update="appsettings.Development.json">
+      <DependentUpon>appsettings.json</DependentUpon>
+    </Content>
+  </ItemGroup>
 </Project>

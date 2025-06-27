@@ -8,7 +8,7 @@ public static class Utility
     {
         var md5 = MD5.Create();
 
-        md5.ComputeHash(ASCIIEncoding.ASCII.GetBytes(password));
+        md5.ComputeHash(Encoding.ASCII.GetBytes(password));
 
         var result = md5.Hash!;
 

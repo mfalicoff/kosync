@@ -12,7 +12,8 @@
     "http": {
       "commandName": "Project",
       "dotnetRunMessages": true,
-      "launchBrowser": false,
+      "launchBrowser": true,
+      "launchUrl": "scalar",
       "applicationUrl": "http://0.0.0.0:5181",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development"

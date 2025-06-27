@@ -1,0 +1,25 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Kosync", "src\Kosync.csproj", "{F9A1AE0C-7668-4F4D-AF56-D9114A66071C}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "SolutionItems", "SolutionItems", "{9F6FDF58-CB29-4BC5-B34A-6F60DFEC06A7}"
+	ProjectSection(SolutionItems) = preProject
+		compose.yaml = compose.yaml
+		Directory.Packages.props = Directory.Packages.props
+		Dockerfile = Dockerfile
+		README.md = README.md
+		.github\workflows\docker-publish.yml = .github\workflows\docker-publish.yml
+	EndProjectSection
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{F9A1AE0C-7668-4F4D-AF56-D9114A66071C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F9A1AE0C-7668-4F4D-AF56-D9114A66071C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F9A1AE0C-7668-4F4D-AF56-D9114A66071C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F9A1AE0C-7668-4F4D-AF56-D9114A66071C}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal
