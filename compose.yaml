@@ -1,4 +1,4 @@
-﻿version: '3.8'
+version: '3.8'
 
 services:
   mongodb:
@@ -14,7 +14,9 @@ services:
     volumes:
       - mongodb_data:/data/db
       - mongodb_config:/data/configdb
-  
+    networks:
+      - kosync-network
+
   mongoku:
     image: huggingface/mongoku:latest
     container_name: kosync-mongoku
@@ -22,9 +24,33 @@ services:
     ports:
       - "3100:3100"
     environment:
-      MONGOKU_DEFAULT_HOST: "mongodb://admin:adminpassword@host.docker.internal:27017"
+      MONGOKU_DEFAULT_HOST: "mongodb://admin:adminpassword@mongodb:27017"
     depends_on:
       - mongodb
+    networks:
+      - kosync-network
+
+  kosync-app:
+    build: .
+    image: kosync:latest
+    container_name: kosync-application
+    restart: unless-stopped
+    ports:
+      - "5000:8080"
+    environment:
+      MongoDB__ConnectionString: "mongodb://admin:adminpassword@mongodb:27017/KosyncDb?authSource=admin"
+      MongoDB__DatabaseName: "KosyncDb"
+      MongoDB__AdminPassword: "adminpassword"
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: "http://+:8080"
+    depends_on:
+      - mongodb
+    networks:
+      - kosync-network
+
+networks:
+  kosync-network:
+    driver: bridge
 
 volumes:
   mongodb_data:

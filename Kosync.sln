@@ -4,11 +4,12 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Kosync", "src\Kosync.csproj
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "SolutionItems", "SolutionItems", "{9F6FDF58-CB29-4BC5-B34A-6F60DFEC06A7}"
 	ProjectSection(SolutionItems) = preProject
-		compose.yaml = compose.yaml
 		Directory.Packages.props = Directory.Packages.props
 		Dockerfile = Dockerfile
 		README.md = README.md
 		.github\workflows\docker-publish.yml = .github\workflows\docker-publish.yml
+		compose.yaml = compose.yaml
+		compose.dev.yaml = compose.dev.yaml
 	EndProjectSection
 EndProject
 Global
