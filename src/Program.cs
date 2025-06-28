@@ -4,7 +4,9 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Kosync.Endpoints;
+using Kosync.Endpoints.Management;
 using Kosync.Extensions;
+using Kosync.Middleware;
 using Kosync.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
@@ -28,9 +30,13 @@ builder.Services.AddSingleton<ProxyService, ProxyService>();
 builder.Services.AddScoped<IPService, IPService>();
 builder.Services.AddKoreaderAuth();
 builder.Services.AddMongoDb(builder.Configuration.GetRequiredSection<MongoDbOptions>());
+builder.Services.AddTransient<ISyncService, SyncService>();
 
 builder.Services.AddOpenApi();
 builder.Services.AddControllers();
+
+builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
+builder.Services.AddProblemDetails();
 
 if (Environment.GetEnvironmentVariable("SINGLE_LINE_LOGGING") == "true")
 {
@@ -59,5 +65,8 @@ if (app.Environment.IsDevelopment())
 SyncEndpoints.Map(app);
 HealthCheckEndpoints.Map(app);
 AuthEndpoint.Map(app);
+ManagementEndpoints.Map(app);
+
+app.UseExceptionHandler();
 
 app.Run();
