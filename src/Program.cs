@@ -18,8 +18,7 @@ builder.Services.Configure<MongoDbOptions>(
 
 builder.Services.AddHttpContextAccessor();
 
-builder.Services.AddSingleton<ProxyService, ProxyService>();
-builder.Services.AddScoped<IPService, IPService>();
+builder.Services.AddIpDetection();
 builder.Services.AddKoreaderAuth();
 builder.Services.AddMongoDb(builder.Configuration.GetRequiredSection<MongoDbOptions>());
 builder.Services.AddTransient<ISyncService, SyncService>();
@@ -45,6 +44,7 @@ WebApplication app = builder.Build();
 
 app.UseForwardedHeaders();
 
+app.UseIpDetection();
 app.UseAuthentication();
 app.UseAuthorization();
 

@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Linq;
 using System.Security.Claims;
 using System.Text.Encodings.Web;
@@ -58,7 +58,7 @@ public class KoReaderAuthenticationHandler(
         [
             new(ClaimTypes.Name, user.Username),
             new(ClaimTypes.Active, user.IsActive.ToString()),
-            new(ClaimTypes.IsAdmin, user.IsAdministrator.ToString()),
+            new(ClaimTypes.UserType, user.IsAdministrator ? ClaimTypes.Admin : ClaimTypes.User)
         ];
 
         ClaimsIdentity identity = new(claims, Scheme.Name);

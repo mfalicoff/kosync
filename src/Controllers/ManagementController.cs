@@ -8,7 +8,6 @@ using Kosync.Database;
 using Kosync.Database.Entities;
 using Kosync.Extensions;
 using Kosync.Models;
-using Kosync.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -18,23 +17,26 @@ namespace Kosync.Controllers;
 
 [ApiController]
 [Authorize(Policy = AuthorizationPolicies.AdminOnly)]
-public class ManagementController(ILogger<ManagementController> logger, ProxyService proxyService, IPService ipService, IHttpContextAccessor contextAccessor, IKosyncRepository kosyncRepository)
-    : ControllerBase
+public class ManagementController(
+    ILogger<ManagementController> logger,
+    IHttpContextAccessor contextAccessor,
+    IKosyncRepository kosyncRepository
+) : ControllerBase
 {
     private readonly ILogger<ManagementController> _logger = logger;
-    private readonly ProxyService _proxyService = proxyService;
-    private readonly IPService _ipService = ipService;
     private readonly IKosyncRepository _kosyncRepository = kosyncRepository;
     private readonly IHttpContextAccessor _contextAccessor = contextAccessor;
 
-    private ClaimsPrincipal UserPrincipal => _contextAccessor.HttpContext?.User ?? throw new InvalidOperationException("HttpContext is not available.");
-    
+    private ClaimsPrincipal UserPrincipal =>
+        _contextAccessor.HttpContext?.User
+        ?? throw new InvalidOperationException("HttpContext is not available.");
+
     [HttpGet("/manage/users")]
     public async Task<ObjectResult> GetUsers()
     {
         // Get all users (without sensitive data like password hashes)
         IEnumerable<UserDocument> users = await _kosyncRepository.GetAllUsersAsync();
-        
+
         // Transform to a safe representation
         var userList = users.Select(u => new
         {
@@ -42,7 +44,7 @@ public class ManagementController(ILogger<ManagementController> logger, ProxySer
             username = u.Username,
             isActive = u.IsActive,
             isAdministrator = u.IsAdministrator,
-            documentCount = u.Documents.Count
+            documentCount = u.Documents.Count,
         });
 
         LogInfo($"User [{UserPrincipal.Username()}] requested /manage/users");
@@ -53,39 +55,30 @@ public class ManagementController(ILogger<ManagementController> logger, ProxySer
     public async Task<ObjectResult> CreateUser(UserCreateRequest payload)
     {
         UserDocument? user = await _kosyncRepository.GetUserByUsernameAsync(payload.username);
-        
+
         if (user is not null)
         {
-            return StatusCode(400, new
-            {
-                message = "User already exists"
-            });
+            return StatusCode(400, new { message = "User already exists" });
         }
 
-        var passwordHash = Utility.HashPassword(payload.password);
+        string passwordHash = Utility.HashPassword(payload.password);
 
         user = new UserDocument
         {
             Username = payload.username,
             PasswordHash = passwordHash,
             IsAdministrator = false,
-            IsActive = true
+            IsActive = true,
         };
 
-        var success = await _kosyncRepository.CreateUserAsync(user);
+        bool success = await _kosyncRepository.CreateUserAsync(user);
         if (!success)
         {
-            return StatusCode(500, new
-            {
-                message = "Failed to create user"
-            });
+            return StatusCode(500, new { message = "Failed to create user" });
         }
 
         LogInfo($"User [{payload.username}] created by user [{UserPrincipal.Username()}]");
-        return StatusCode(200, new
-        {
-            message = "User created successfully"
-        });
+        return StatusCode(200, new { message = "User created successfully" });
     }
 
     [HttpDelete("/manage/users")]
@@ -94,28 +87,21 @@ public class ManagementController(ILogger<ManagementController> logger, ProxySer
         UserDocument? user = await _kosyncRepository.GetUserByUsernameAsync(username);
         if (user == null)
         {
-            LogWarning($"User [{username}] deletion requested by [{UserPrincipal.Username()}] but user does not exist.");
-            return StatusCode(400, new
-            {
-                message = "User does not exist"
-            });
+            LogWarning(
+                $"User [{username}] deletion requested by [{UserPrincipal.Username()}] but user does not exist."
+            );
+            return StatusCode(400, new { message = "User does not exist" });
         }
 
-        var res = await _kosyncRepository.DeleteUserAsync(user.Id!);
+        bool res = await _kosyncRepository.DeleteUserAsync(user.Id!);
         if (!res)
         {
-            return StatusCode(500, new
-            {
-                message = "Failed to delete user"
-            });
+            return StatusCode(500, new { message = "Failed to delete user" });
         }
 
         LogInfo($"User [{username}] has been deleted by [{UserPrincipal.Username()}]");
 
-        return StatusCode(200, new
-        {
-            message = "Success"
-        });
+        return StatusCode(200, new { message = "Success" });
     }
 
     [HttpGet("/manage/users/documents")]
@@ -126,10 +112,7 @@ public class ManagementController(ILogger<ManagementController> logger, ProxySer
         UserDocument? user = await _kosyncRepository.GetUserByUsernameAsync(username);
         if (user is null)
         {
-            return StatusCode(400, new
-            {
-                message = "User does not exist"
-            });
+            return StatusCode(400, new { message = "User does not exist" });
         }
 
         // Convert dictionary to list for API response
@@ -140,7 +123,7 @@ public class ManagementController(ILogger<ManagementController> logger, ProxySer
             percentage = doc.Percentage,
             device = doc.Device,
             deviceId = doc.DeviceId,
-            timestamp = doc.Timestamp
+            timestamp = doc.Timestamp,
         });
 
         return StatusCode(200, documents);
@@ -152,35 +135,31 @@ public class ManagementController(ILogger<ManagementController> logger, ProxySer
         UserDocument? user = await _kosyncRepository.GetUserByUsernameAsync(username);
         if (user is null)
         {
-            return StatusCode(400, new
-            {
-                message = "User does not exist"
-            });
+            return StatusCode(400, new { message = "User does not exist" });
         }
 
         if (!user.Documents.ContainsKey(documentHash))
         {
-            return StatusCode(404, new
-            {
-                message = $"Document hash [{documentHash}] was not found for user [{username}]."
-            });
+            return StatusCode(
+                404,
+                new
+                {
+                    message = $"Document hash [{documentHash}] was not found for user [{username}].",
+                }
+            );
         }
 
-        var success = await _kosyncRepository.RemoveDocumentAsync(username, documentHash);
+        bool success = await _kosyncRepository.RemoveDocumentAsync(username, documentHash);
         if (!success)
         {
-            return StatusCode(500, new
-            {
-                message = "Failed to delete document"
-            });
+            return StatusCode(500, new { message = "Failed to delete document" });
         }
 
-        LogInfo($"User [{UserPrincipal.Username()}] deleted document with hash [{documentHash}] for user [{username}].");
+        LogInfo(
+            $"User [{UserPrincipal.Username()}] deleted document with hash [{documentHash}] for user [{username}]."
+        );
 
-        return StatusCode(200, new
-        {
-            message = "Success"
-        });
+        return StatusCode(200, new { message = "Success" });
     }
 
     [HttpPut("/manage/users/active")]
@@ -188,41 +167,38 @@ public class ManagementController(ILogger<ManagementController> logger, ProxySer
     {
         if (username == "admin")
         {
-            LogWarning($"Attempt to toggle admin user active from user [{UserPrincipal.Username()}].");
+            LogWarning(
+                $"Attempt to toggle admin user active from user [{UserPrincipal.Username()}]."
+            );
 
-            return StatusCode(400, new
-            {
-                message = "Cannot update admin user"
-            });
+            return StatusCode(400, new { message = "Cannot update admin user" });
         }
 
         UserDocument? user = await _kosyncRepository.GetUserByUsernameAsync(username);
         if (user is null)
         {
-            LogInfo($"PUT request to /manage/users/active received from [{UserPrincipal.Username()}] but target username [{username}] does not exist.");
+            LogInfo(
+                $"PUT request to /manage/users/active received from [{UserPrincipal.Username()}] but target username [{username}] does not exist."
+            );
 
-            return StatusCode(400, new
-            {
-                message = "User does not exist"
-            });
+            return StatusCode(400, new { message = "User does not exist" });
         }
 
         user.IsActive = !user.IsActive;
-        var success = await _kosyncRepository.UpdateUserAsync(user);
+        bool success = await _kosyncRepository.UpdateUserAsync(user);
         if (!success)
         {
-            return StatusCode(500, new
-            {
-                message = "Failed to update user"
-            });
+            return StatusCode(500, new { message = "Failed to update user" });
         }
 
-        LogInfo($"User [{username}] set to {(user.IsActive ? "active" : "inactive")} by user [{UserPrincipal.Username()}]");
+        LogInfo(
+            $"User [{username}] set to {(user.IsActive ? "active" : "inactive")} by user [{UserPrincipal.Username()}]"
+        );
 
-        return StatusCode(200, new
-        {
-            message = user.IsActive ? "User marked as active" : "User marked as inactive"
-        });
+        return StatusCode(
+            200,
+            new { message = user.IsActive ? "User marked as active" : "User marked as inactive" }
+        );
     }
 
     [HttpPut("/manage/users/password")]
@@ -231,46 +207,33 @@ public class ManagementController(ILogger<ManagementController> logger, ProxySer
         // KOReader will literally not attempt to log in with a blank password field or with just whitespace
         if (string.IsNullOrWhiteSpace(payload.password))
         {
-            return StatusCode(400, new
-            {
-                message = "Password cannot be empty or whitespace"
-            });
+            return StatusCode(400, new { message = "Password cannot be empty or whitespace" });
         }
 
         if (username == "admin")
         {
             LogWarning($"Attempt to change admin password from user [{UserPrincipal.Username()}].");
-            return StatusCode(400, new
-            {
-                message = "Cannot update admin user"
-            });
+            return StatusCode(400, new { message = "Cannot update admin user" });
         }
 
         UserDocument? user = await _kosyncRepository.GetUserByUsernameAsync(username);
         if (user is null)
         {
-            LogWarning($"Password change request received from [{UserPrincipal.Username()}] but target username [{username}] does not exist.");
-            return StatusCode(400, new
-            {
-                message = "User does not exist"
-            });
+            LogWarning(
+                $"Password change request received from [{UserPrincipal.Username()}] but target username [{username}] does not exist."
+            );
+            return StatusCode(400, new { message = "User does not exist" });
         }
 
         user.PasswordHash = Utility.HashPassword(payload.password);
-        var success = await _kosyncRepository.UpdateUserAsync(user);
+        bool success = await _kosyncRepository.UpdateUserAsync(user);
         if (!success)
         {
-            return StatusCode(500, new
-            {
-                message = "Failed to update password"
-            });
+            return StatusCode(500, new { message = "Failed to update password" });
         }
 
         LogInfo($"User [{username}]'s password updated by [{UserPrincipal.Username()}].");
-        return StatusCode(200, new
-        {
-            message = "Password changed successfully"
-        });
+        return StatusCode(200, new { message = "Password changed successfully" });
     }
 
     private void LogInfo(string text)
@@ -285,11 +248,11 @@ public class ManagementController(ILogger<ManagementController> logger, ProxySer
 
     private void Log(LogLevel level, string text)
     {
-        string logMsg = $"[{DateTime.Now.ToString("yyyy/MM/dd HH:mm:ss")}] [{_ipService.ClientIP}]";
+        string logMsg =
+            $"[{DateTime.Now.ToString("yyyy/MM/dd HH:mm:ss")}] [{_contextAccessor.HttpContext?.GetClientIP()}]";
 
         // If trusted proxies are set but this request comes from another address, mark it
-        if (_proxyService.TrustedProxies.Length > 0 &&
-            !_ipService.TrustedProxy)
+        if (!_contextAccessor.HttpContext?.IsTrustedProxy() ?? false)
         {
             logMsg += "*";
         }
