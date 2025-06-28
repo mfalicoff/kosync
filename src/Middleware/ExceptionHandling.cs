@@ -28,12 +28,17 @@ internal sealed class GlobalExceptionHandler(ILogger<GlobalExceptionHandler> log
 
         _logger.LogError(exception, "Unhandled exception occurred: {Message}", exception.Message);
 
+        (int statusCode, string title) = exception switch
+        {
+            UnauthorizedAccessException => (StatusCodes.Status403Forbidden, "Forbidden"),
+            _ => (StatusCodes.Status500InternalServerError, "Internal Server Error"),
+        };
+
         ProblemDetails problemDetails = new()
         {
-            Status = StatusCodes.Status500InternalServerError,
-            Title = "Internal Server Error",
+            Status = statusCode,
+            Title = title,
             Detail = "An unexpected error occurred while processing your request.",
-            Type = "https://tools.ietf.org/html/rfc7231#section-6.6.1",
         };
 
         httpContext.Response.StatusCode = problemDetails.Status.Value;

@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 using Kosync.Database;
 using Kosync.Database.Entities;
 using Kosync.Exceptions;
-using Kosync.Middleware;
+using Kosync.Extensions;
 using Microsoft.Extensions.Logging;
 
 namespace Kosync.Services;
@@ -67,6 +67,15 @@ public class UserService(IKosyncRepository kosyncRepository, ILogger<UserService
     )
     {
         _logger.LogInformation("Deleting user with username: {Username}", username);
+        UserDocument? user = await _kosyncRepository.GetUserByUsernameAsync(username);
+
+        if (user == null)
+        {
+            _logger.LogError("User not found: {Username}", username);
+            throw new UserNotFoundException(username);
+        }
+
+        user.ThrowIfNotAdmin();
 
         bool result = await _kosyncRepository.DeleteUserAsync(username);
         if (!result)
@@ -91,6 +100,8 @@ public class UserService(IKosyncRepository kosyncRepository, ILogger<UserService
             throw new UserNotFoundException(username);
         }
 
+        user.ThrowIfNotAdmin();
+
         user.IsActive = isActive;
         bool result = await _kosyncRepository.UpdateUserAsync(user);
 
@@ -114,6 +125,8 @@ public class UserService(IKosyncRepository kosyncRepository, ILogger<UserService
             _logger.LogError("User not found: {Username}", username);
             throw new UserNotFoundException(username);
         }
+
+        user.ThrowIfNotAdmin();
 
         user.PasswordHash = newPassword;
         bool result = await _kosyncRepository.UpdateUserAsync(user);

@@ -1,19 +1,14 @@
-using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Security.Claims;
 using System.Threading.Tasks;
 using Kosync.Auth;
-using Kosync.Database;
 using Kosync.Database.Entities;
-using Kosync.Extensions;
 using Kosync.Models;
 using Kosync.Services;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Routing;
-using Microsoft.Extensions.Logging;
 
 namespace Kosync.Endpoints.Management;
 
