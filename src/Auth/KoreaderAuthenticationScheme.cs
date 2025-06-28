@@ -1,10 +1,10 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Linq;
 using System.Security.Claims;
 using System.Text.Encodings.Web;
 using System.Threading.Tasks;
-using Kosync.Database;
 using Kosync.Database.Entities;
+using Kosync.Services;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -21,10 +21,10 @@ public class KoReaderAuthenticationHandler(
     IOptionsMonitor<KoReaderAuthenticationSchemeOptions> options,
     ILoggerFactory logger,
     UrlEncoder encoder,
-    IKosyncRepository kosyncRepository
+    IUserService userService
 ) : AuthenticationHandler<KoReaderAuthenticationSchemeOptions>(options, logger, encoder)
 {
-    private readonly IKosyncRepository _kosyncRepository = kosyncRepository;
+    private readonly IUserService _userService = userService;
 
     protected override async Task<AuthenticateResult> HandleAuthenticateAsync()
     {
@@ -44,7 +44,10 @@ public class KoReaderAuthenticationHandler(
             return AuthenticateResult.Fail("Invalid authentication headers");
         }
 
-        UserDocument? user = await _kosyncRepository.GetUserByUsernameAsync(username);
+        UserDocument? user = await _userService.GetUserByUsernameAsync(
+            username,
+            Request.HttpContext.RequestAborted
+        );
 
         if (user == null || user.PasswordHash != password)
         {
