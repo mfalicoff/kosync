@@ -44,7 +44,7 @@ public class SyncService(IKosyncRepository repository, ILogger<SyncService> logg
         document.DeviceId = documentProgressRequest.device_id;
         document.Timestamp = DateTime.UtcNow;
 
-        var result = await repository.AddOrUpdateDocumentAsync(username, document);
+        bool result = await repository.AddOrUpdateDocumentAsync(username, document);
         if (!result)
         {
             _logger.LogError(

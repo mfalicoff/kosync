@@ -3,11 +3,12 @@ using System.Linq;
 using System.Security.Claims;
 using System.Text.Encodings.Web;
 using System.Threading.Tasks;
-using Kosync.Database;
 using Kosync.Database.Entities;
+using Kosync.Services;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+
 namespace Kosync.Auth;
 
 public class KoReaderAuthenticationSchemeOptions : AuthenticationSchemeOptions
@@ -20,29 +21,34 @@ public class KoReaderAuthenticationHandler(
     IOptionsMonitor<KoReaderAuthenticationSchemeOptions> options,
     ILoggerFactory logger,
     UrlEncoder encoder,
-    IKosyncRepository kosyncRepository)
-    : AuthenticationHandler<KoReaderAuthenticationSchemeOptions>(options, logger, encoder)
+    IUserService userService
+) : AuthenticationHandler<KoReaderAuthenticationSchemeOptions>(options, logger, encoder)
 {
-    private readonly IKosyncRepository _kosyncRepository = kosyncRepository;
-    
+    private readonly IUserService _userService = userService;
+
     protected override async Task<AuthenticateResult> HandleAuthenticateAsync()
     {
-        if (!Request.Headers.ContainsKey(Options.AuthHeaderName) || 
-            !Request.Headers.ContainsKey(Options.PasswordHeaderName))
+        if (
+            !Request.Headers.ContainsKey(Options.AuthHeaderName)
+            || !Request.Headers.ContainsKey(Options.PasswordHeaderName)
+        )
         {
             return AuthenticateResult.Fail("Missing authentication headers");
         }
 
-        var username = Request.Headers[Options.AuthHeaderName].FirstOrDefault();
-        var password = Request.Headers[Options.PasswordHeaderName].FirstOrDefault();
+        string? username = Request.Headers[Options.AuthHeaderName].FirstOrDefault();
+        string? password = Request.Headers[Options.PasswordHeaderName].FirstOrDefault();
 
         if (string.IsNullOrEmpty(username) || string.IsNullOrEmpty(password))
         {
             return AuthenticateResult.Fail("Invalid authentication headers");
         }
-        
-        UserDocument? user = await _kosyncRepository.GetUserByUsernameAsync(username);
-        
+
+        UserDocument? user = await _userService.GetUserByUsernameAsync(
+            username,
+            Request.HttpContext.RequestAborted
+        );
+
         if (user == null || user.PasswordHash != password)
         {
             return AuthenticateResult.Fail("Invalid credentials");
@@ -53,12 +59,11 @@ public class KoReaderAuthenticationHandler(
             new(ClaimTypes.Name, user.Username),
             new(ClaimTypes.Active, user.IsActive.ToString()),
             new(ClaimTypes.IsAdmin, user.IsAdministrator.ToString()),
-
         ];
-        
-        var identity = new ClaimsIdentity(claims, Scheme.Name);
-        var principal = new ClaimsPrincipal(identity);
-        var ticket = new AuthenticationTicket(principal, Scheme.Name);
+
+        ClaimsIdentity identity = new(claims, Scheme.Name);
+        ClaimsPrincipal principal = new(identity);
+        AuthenticationTicket ticket = new(principal, Scheme.Name);
 
         return AuthenticateResult.Success(ticket);
     }

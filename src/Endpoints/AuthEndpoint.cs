@@ -1,9 +1,8 @@
-using System;
 using System.Threading.Tasks;
 using Kosync.Database;
-using Kosync.Database.Entities;
 using Kosync.Extensions;
 using Kosync.Models;
+using Kosync.Services;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
@@ -19,7 +18,7 @@ public static class AuthEndpoint
 {
     public static void Map(WebApplication app)
     {
-        app.MapGroup("/v2/users").WithTags("Auth").MapAuthApi();
+        app.MapGroup("users").WithTags("Auth").MapAuthApi();
     }
 
     private static void MapAuthApi(this IEndpointRouteBuilder app)
@@ -43,30 +42,16 @@ public static class AuthEndpoint
     }
 
     private static async Task<Results<Created<CreateUserResponse>, ProblemHttpResult>> CreateUser(
+        HttpContext context,
         UserCreateRequest payload,
-        IKosyncRepository kosyncRepository
+        IKosyncRepository kosyncRepository,
+        IUserService userService
     )
     {
-        if (Environment.GetEnvironmentVariable("REGISTRATION_DISABLED") == "true")
-        {
-            return TypedResults.Problem("User registration is disabled", statusCode: 402);
-        }
-
-        UserDocument? existing = await kosyncRepository.GetUserByUsernameAsync(payload.username);
-
-        if (existing is not null)
-        {
-            return TypedResults.Problem("User already exists", statusCode: 402);
-        }
-
-        await kosyncRepository.CreateUserAsync(
-            new UserDocument
-            {
-                Username = payload.username,
-                PasswordHash = payload.password,
-                IsAdministrator = false,
-                IsActive = true,
-            }
+        await userService.CreateUserAsync(
+            payload.username,
+            payload.password,
+            context.RequestAborted
         );
 
         return TypedResults.Created("", new CreateUserResponse(payload.username));

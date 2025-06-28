@@ -1,6 +1,4 @@
-﻿
-
-using System;
+﻿using System;
 using System.Linq;
 using System.Net;
 using Microsoft.Extensions.Logging;
@@ -13,8 +11,8 @@ public class ProxyService
 
     private bool _proxiesLoaded = false;
 
-
     private string[] _trustedProxies = [];
+
     /// <summary>
     /// List of configured trusted proxies
     /// </summary>
@@ -27,7 +25,6 @@ public class ProxyService
         }
     }
 
-
     public ProxyService(ILogger<ProxyService> logger)
     {
         _logger = logger;
@@ -35,7 +32,10 @@ public class ProxyService
 
     private void LoadProxies()
     {
-        if (_proxiesLoaded) { return; }
+        if (_proxiesLoaded)
+        {
+            return;
+        }
 
         _proxiesLoaded = true;
         string? tempString;
@@ -49,7 +49,10 @@ public class ProxyService
             return;
         }
 
-        string[] tempProxies = proxies.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+        string[] tempProxies = proxies.Split(
+            ',',
+            StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries
+        );
 
         for (int i = 0; i < tempProxies.Length; i++)
         {
@@ -71,9 +74,12 @@ public class ProxyService
         {
             tempString = "";
 
-            foreach (var prox in _trustedProxies)
+            foreach (string prox in _trustedProxies)
             {
-                if (!string.IsNullOrEmpty(tempString)) { tempString += ", "; }
+                if (!string.IsNullOrEmpty(tempString))
+                {
+                    tempString += ", ";
+                }
 
                 tempString += prox;
             }

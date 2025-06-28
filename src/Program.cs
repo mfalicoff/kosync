@@ -1,21 +1,13 @@
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
 using Kosync.Endpoints;
 using Kosync.Endpoints.Management;
 using Kosync.Extensions;
 using Kosync.Middleware;
 using Kosync.Services;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.OpenApi;
-using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Microsoft.OpenApi.Models;
 using Scalar.AspNetCore;
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
@@ -31,10 +23,12 @@ builder.Services.AddScoped<IPService, IPService>();
 builder.Services.AddKoreaderAuth();
 builder.Services.AddMongoDb(builder.Configuration.GetRequiredSection<MongoDbOptions>());
 builder.Services.AddTransient<ISyncService, SyncService>();
+builder.Services.AddTransient<IUserService, UserService>();
 
 builder.Services.AddOpenApi();
 builder.Services.AddControllers();
 
+builder.Services.AddExceptionHandler<DomainExceptionHandler>();
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 builder.Services.AddProblemDetails();
 
