@@ -5,12 +5,16 @@ using Kosync.Database;
 using Kosync.Database.Entities;
 using Kosync.Exceptions;
 using Kosync.Middleware;
+using Microsoft.Extensions.Logging;
 
 namespace Kosync.Services;
 
-public class UserService(IKosyncRepository kosyncRepository) : IUserService
+public class UserService(IKosyncRepository kosyncRepository, ILogger<UserService> logger)
+    : IUserService
 {
     private readonly IKosyncRepository _kosyncRepository = kosyncRepository;
+
+    private readonly ILogger<UserService> _logger = logger;
 
     public async Task CreateUserAsync(
         string username,
@@ -18,6 +22,8 @@ public class UserService(IKosyncRepository kosyncRepository) : IUserService
         CancellationToken token = default
     )
     {
+        _logger.LogInformation("Creating user with username: {Username}", username);
+
         if (Environment.GetEnvironmentVariable("REGISTRATION_DISABLED") == "true")
         {
             throw new RegistrationDisabledException();
