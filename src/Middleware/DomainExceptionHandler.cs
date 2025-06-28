@@ -35,6 +35,7 @@ internal sealed class DomainExceptionHandler(ILogger<DomainExceptionHandler> log
         {
             UserAlreadyExistsException => (StatusCodes.Status409Conflict, "Conflict"),
             RegistrationDisabledException => (StatusCodes.Status403Forbidden, "Forbidden"),
+            UserNotFoundException => (StatusCodes.Status404NotFound, "Not Found"),
             _ => (StatusCodes.Status400BadRequest, "Bad Request"),
         };
 

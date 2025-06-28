@@ -9,3 +9,6 @@ public class UserAlreadyExistsException(string username)
 
 public class RegistrationDisabledException()
     : DomainException("User registration is currently disabled");
+
+public class UserNotFoundException(string username)
+    : DomainException($"User '{username}' not found");

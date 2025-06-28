@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Kosync.Database;
@@ -58,5 +59,78 @@ public class UserService(IKosyncRepository kosyncRepository, ILogger<UserService
     )
     {
         return _kosyncRepository.GetUserByUsernameAsync(username);
+    }
+
+    public async Task DeleteUserAsync(
+        string username,
+        CancellationToken cancellationToken = default
+    )
+    {
+        _logger.LogInformation("Deleting user with username: {Username}", username);
+
+        bool result = await _kosyncRepository.DeleteUserAsync(username);
+        if (!result)
+        {
+            _logger.LogError("Failed to delete user with username: {Username}", username);
+            throw new UserNotFoundException(username);
+        }
+    }
+
+    public async Task UpdateUserStatusAsync(
+        string username,
+        bool isActive,
+        CancellationToken cancellationToken = default
+    )
+    {
+        _logger.LogInformation("Updating status for user: {Username}", username);
+
+        UserDocument? user = await _kosyncRepository.GetUserByUsernameAsync(username);
+        if (user == null)
+        {
+            _logger.LogError("User not found: {Username}", username);
+            throw new UserNotFoundException(username);
+        }
+
+        user.IsActive = isActive;
+        bool result = await _kosyncRepository.UpdateUserAsync(user);
+
+        if (!result)
+        {
+            throw new Exception("Failed to update user");
+        }
+    }
+
+    public async Task UpdateUserPasswordAsync(
+        string username,
+        string newPassword,
+        CancellationToken cancellationToken = default
+    )
+    {
+        _logger.LogInformation("Updating password for user: {Username}", username);
+
+        UserDocument? user = await _kosyncRepository.GetUserByUsernameAsync(username);
+        if (user == null)
+        {
+            _logger.LogError("User not found: {Username}", username);
+            throw new UserNotFoundException(username);
+        }
+
+        user.PasswordHash = newPassword;
+        bool result = await _kosyncRepository.UpdateUserAsync(user);
+
+        if (!result)
+        {
+            _logger.LogError("Failed to update password for user: {Username}", username);
+            throw new Exception("Failed to update user password");
+        }
+    }
+
+    public Task<IEnumerable<UserDocument>> GetUserDocumentsAsync(
+        CancellationToken cancellationToken = default
+    )
+    {
+        _logger.LogInformation("Retrieving all user documents");
+
+        return _kosyncRepository.GetAllUsersAsync();
     }
 }

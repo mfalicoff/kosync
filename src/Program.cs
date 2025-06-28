@@ -25,7 +25,6 @@ builder.Services.AddTransient<ISyncService, SyncService>();
 builder.Services.AddTransient<IUserService, UserService>();
 
 builder.Services.AddOpenApi();
-builder.Services.AddControllers();
 
 builder.Services.AddExceptionHandler<DomainExceptionHandler>();
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
@@ -47,8 +46,6 @@ app.UseForwardedHeaders();
 app.UseIpDetection();
 app.UseAuthentication();
 app.UseAuthorization();
-
-app.MapControllers();
 
 if (app.Environment.IsDevelopment())
 {
