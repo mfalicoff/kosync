@@ -23,6 +23,15 @@ public record DocumentProgressRequest(
     long Timestamp
 );
 
+public record DocumentProgressResponse(
+    string device,
+    string deviceId,
+    string document,
+    decimal percentage,
+    string progress,
+    long timestamp
+);
+
 public static class SyncEndpoints
 {
     public static void Map(WebApplication app)
@@ -83,7 +92,7 @@ public static class SyncEndpoints
 
         DateTimeOffset time = new(result.Timestamp);
 
-        DocumentProgressRequest response = new(
+        DocumentProgressResponse response = new(
             result.Device,
             result.DeviceId,
             result.DocumentHash,

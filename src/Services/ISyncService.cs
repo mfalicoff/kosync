@@ -1,7 +1,6 @@
 using System.Threading;
 using System.Threading.Tasks;
 using Kosync.Database.Entities;
-using Kosync.Endpoints;
 using Kosync.Models;
 
 namespace Kosync.Services;
