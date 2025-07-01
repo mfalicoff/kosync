@@ -22,5 +22,6 @@
       ]
     }
   ],
-  "separateMajorMinor": false
+  "separateMajorMinor": false,
+  "branchName": "renovate/all"
 }
