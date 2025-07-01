@@ -4,7 +4,7 @@
     "config:recommended"
   ],
   "schedule": [
-    "weekly"
+    "* * * * 0,6"
   ],
   "prConcurrentLimit": 1,
   "dependencyDashboard": false,
