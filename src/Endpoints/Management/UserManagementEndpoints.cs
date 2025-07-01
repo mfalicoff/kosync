@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Routing;
+using Kosync.Extensions;
 
 namespace Kosync.Endpoints.Management;
 
@@ -71,7 +72,7 @@ public static class UserManagementEndpoints
         IUserService userService
     )
     {
-        string passwordHash = Utility.HashPassword(payload.password);
+        string passwordHash = payload.password.HashPassword();
         await userService.CreateUserAsync(payload.username, passwordHash, context.RequestAborted);
 
         return TypedResults.Created("");

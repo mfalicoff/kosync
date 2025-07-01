@@ -1,11 +1,11 @@
 using System.Security.Cryptography;
 using System.Text;
 
-namespace Kosync;
+namespace Kosync.Extensions;
 
-public static class Utility
+public static class StringExtensions
 {
-    public static string HashPassword(string password)
+    public static string HashPassword(this string password)
     {
         MD5 md5 = MD5.Create();
 
@@ -14,9 +14,9 @@ public static class Utility
         byte[] result = md5.Hash!;
 
         StringBuilder strBuilder = new();
-        for (int i = 0; i < result.Length; i++)
+        foreach (byte t in result)
         {
-            strBuilder.Append(result[i].ToString("x2"));
+            strBuilder.Append(t.ToString("x2"));
         }
 
         return strBuilder.ToString();
