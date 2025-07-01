@@ -6,7 +6,7 @@
   "schedule": [
     "* * * * 0,6"
   ],
-  "prConcurrentLimit": 1,
+  "prConcurrentLimit": 0,
   "dependencyDashboard": false,
   "groupName": "all dependencies",
   "groupSlug": "all",
@@ -22,5 +22,6 @@
       ]
     }
   ],
-  "separateMajorMinor": false
+  "separateMajorMinor": false,
+  "push"
 }
