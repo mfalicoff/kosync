@@ -6,6 +6,8 @@ using Kosync.Database;
 using Kosync.Database.Entities;
 using Kosync.Middleware;
 using Kosync.Services;
+using Microsoft.Data.Sqlite;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using MongoDB.Driver;
 using AuthenticationSchemes = Kosync.Auth.AuthenticationSchemes;
@@ -100,4 +102,47 @@ public static class ServiceCollectionExtensions
 
         return services;
     }
+
+     public static IServiceCollection AddPersistence(
+        this IServiceCollection services,
+        IConfiguration configuration
+    )
+    {
+        string databaseProvider = configuration.GetValue<string>("DatabaseProvider") ?? DatabaseProviders.MongoDB;
+
+        if (databaseProvider.Equals(DatabaseProviders.SQLite, StringComparison.OrdinalIgnoreCase))
+        {
+            services.Configure<SqliteOptions>(
+                configuration.GetSection(SqliteOptions.SectionName)
+            );
+            services.AddSqlite(configuration.GetRequiredSection<SqliteOptions>());
+        }
+        else
+        {
+            services.Configure<MongoDbOptions>(
+                configuration.GetSection(MongoDbOptions.SectionName)
+            );
+            services.AddMongoDb(configuration.GetRequiredSection<MongoDbOptions>());
+        }
+
+        return services;
+    }
+
+    public static IServiceCollection AddSqlite(
+        this IServiceCollection services,
+        SqliteOptions options
+    )
+    {
+        services.AddSingleton(provider =>
+        {
+            SqliteConnection connection = new(options.ConnectionString);
+            connection.Open();
+            return connection;
+        });
+        services.AddHostedService<SqliteInitializerService>();
+        services.AddTransient<IKosyncRepository, SqliteRepository>();
+        return services;
+    }
+
+   
 }

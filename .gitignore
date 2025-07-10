@@ -479,3 +479,4 @@ $RECYCLE.BIN/
 # LiteDB data directory
 data/
 .idea/
+**/*.db

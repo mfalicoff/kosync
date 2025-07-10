@@ -5,9 +5,13 @@
     <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
-    <PackageReference Include="MongoDB.Driver" />
-    <PackageReference Include="Scalar.AspNetCore" />
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi"/>
+    <PackageReference Include="MongoDB.Driver"/>
+    <PackageReference Include="Scalar.AspNetCore"/>
+    <PackageReference Include="Microsoft.Data.Sqlite"/>
+    <PackageReference Include="Dapper"/>
+    <PackageReference Include="SqlKata"/>
+    <PackageReference Include="SqlKata.Execution"/>
   </ItemGroup>
   <ItemGroup>
     <Content Update="appsettings.Development.json">

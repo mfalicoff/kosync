@@ -4,12 +4,41 @@
 
 Users of KOReader can register a user on this synchronisation server and use the inbuilt _Progress sync_ plugin to keep all reading progress synchronised between devices.
 
-All data is stored in a MongoDB database, which can be managed using the mongoku web interface. The server is designed to be self-hostable, allowing users to run their own instance of the sync server.
+## Database Support
+
+The server supports **two database backends**:
+
+- **MongoDB** - Full-featured document database with advanced querying capabilities
+- **SQLite** - Lightweight, file-based database for simpler deployments
+
+You can switch between databases by changing the `DatabaseProvider` configuration. Both databases use the same entities and provide identical functionality through a unified repository interface.
+## Configuration
+
+Set the database provider in your `appsettings.json`:
+
+```json
+{
+  "DatabaseProvider": "MongoDB",  // or "SQLite"
+  "MongoDB": {
+    "ConnectionString": "mongodb://admin:adminpassword@mongodb:27017/KosyncDb?authSource=admin",
+    "DatabaseName": "KosyncDb",
+    "CollectionName": "KosyncUsers",
+    "AdminPassword": "adminpassword"
+  },
+  "SQLite": {
+    "ConnectionString": "Data Source=kosync.db",
+    "AdminPassword": "adminpassword"
+  }
+}
+```
+
 ## How to run your own server?
 
-The recommendation is to use [Docker](https://www.docker.com/) with [Docker Compose](https://docs.docker.com/compose/).
+### Option 1: MongoDB (Docker Compose)
 
-```
+For full-featured deployments with advanced querying capabilities:
+
+```yaml
 services:
   mongodb:
     image: mongo:8.0
@@ -48,6 +77,7 @@ services:
     ports:
       - "5000:8080"
     environment:
+      DatabaseProvider: "MongoDB"
       MongoDB__ConnectionString: "mongodb://admin:adminpassword@mongodb:27017/KosyncDb?authSource=admin"
       MongoDB__DatabaseName: "KosyncDb"
       MongoDB__AdminPassword: "adminpassword"
@@ -69,25 +99,64 @@ volumes:
     driver: local
 ```
 
-`/app/data` will contain the database, which stores user and document progress information.
+### Option 2: SQLite (Standalone)
 
-An admin user with the username `admin` will be created when the server first starts. If you provide the `ADMIN_PASSWORD` environment variable, the password for this admin user will be changed to the value provided. If you do not provide a value, the password for this user will be set to `admin`. The recommendation is to set this to a strong password generated with a password manager like [Bitwarden](https://bitwarden.com/). This admin user can be used to interact with the management API.
+For simpler deployments without external database dependencies:
 
-If the `REGISTRATION_DISABLED` environment variable is set to `true`, the sync server will respond with an `User registration is disabled` error message when trying to create a new user. This is useful if you expose your sync server to the public internet, but don't want anyone to be able to register a user. This is a feature that is not available in the official sync server.
+```yaml
+services:
+  kosync-app:
+    build: .
+    image: kosync:latest
+    container_name: kosync-application
+    restart: unless-stopped
+    ports:
+      - "5000:8080"
+    environment:
+      DatabaseProvider: "SQLite"
+      SQLite__ConnectionString: "Data Source=/app/data/kosync.db"
+      SQLite__AdminPassword: "adminpassword"
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: "http://+:8080"
+    volumes:
+      - kosync_data:/app/data
 
-The `TRUSTED_PROXIES` environment variable is an optional variable that defines one or more trusted proxies. It should be a comma delineated list of IPv4 or IPv6 addresses. If `TRUSTED_PROXIES` is set, when a request comes through a trusted proxy, the X-Forwarded-For header will be checked for the client's real IP address to use in logging. If `TRUSTED_PROXIES` is not set, or if a request does not come through a trusted proxy, the request's source IP address will be used for logging. Requests that do not come through a trusted proxy when `TRUSTED_PROXIES` is set will be marked with an asterisk (*) in the logs.
+volumes:
+  kosync_data:
+    driver: local
+```
 
-If you would like logging output to be on a single line, you may add the environment variable `SINGLE_LINE_LOGGING` and set it to `true`.
+The SQLite database file will be stored in `/app/data/kosync.db` and contains all user and document progress information.
 
-Mapping user to `1000:1000` is just a way to ensure the database files are created using your own user, rather than root. If your operating system user ID is different from `1000:1000`, change it to yours.
+## Environment Variables
 
-This example doesn't expose any ports for the container, however the sync server is accessible via port `8080` inside the container. The recommendation is to expose the server via a reverse proxy such as [Nginx Proxy Manager](https://nginxproxymanager.com/).
+**Database Configuration:**
+- `DatabaseProvider` - Set to `"MongoDB"` or `"SQLite"` (default: `"MongoDB"`)
 
-Prior to .NET 8, the default port was `80`. This was changed for [various reasons](https://learn.microsoft.com/en-us/dotnet/core/compatibility/containers/8.0/aspnet-port) by Microsoft. You can manually set the port using the `ASPNETCORE_HTTP_PORTS` environment variable, if this is something you would like to configure.
+**Admin User:**
+An admin user with the username `admin` will be created when the server first starts. The admin password is configured via:
+- **MongoDB**: `MongoDB__AdminPassword` environment variable
+- **SQLite**: `SQLite__AdminPassword` environment variable
+
+If not provided, the password defaults to `admin`. The recommendation is to set this to a strong password generated with a password manager like [Bitwarden](https://bitwarden.com/). This admin user can be used to interact with the management API.
+
+**Other Options:**
+
+- `REGISTRATION_DISABLED` - Set to `"true"` to disable user registration (useful for public deployments)
+- `TRUSTED_PROXIES` - Comma-separated list of trusted proxy IP addresses for logging
+- `SINGLE_LINE_LOGGING` - Set to `"true"` for single-line log output
+- `ASPNETCORE_HTTP_PORTS` - Configure custom HTTP ports (default: `8080`)
+
+## Deployment Notes
+
+- The sync server is accessible via port `8080` inside the container
+- The recommendation is to expose the server via a reverse proxy such as [Caddy](https://nginxproxymanager.com/)
+- For SQLite deployments, ensure the data directory is properly mounted as a volume
+- For MongoDB deployments, consider using the mongoku web interface for database management
 
 ## Management API
 
-There are some management API endpoints you can interact with using a tool like [Postman](https://www.postman.com/).
+There are some management API endpoints you can interact with using a tool like [Postman](https://caddyserver.com/).
 
 Only the admin user can make requests to these API endpoints, with the exception of users being allowed to query and delete their own documents and delete their own account.
 
