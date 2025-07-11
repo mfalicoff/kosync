@@ -2,6 +2,12 @@
   "version": 2,
   "dependencies": {
     "net9.0": {
+      "CSharpier.MsBuild": {
+        "type": "Direct",
+        "requested": "[1.0.3, )",
+        "resolved": "1.0.3",
+        "contentHash": "Bc7EQC/20z0GO3iN9u/pa5ku7jjzCldzfCn52SDxM6r8+dqeqrQVyOh3Ydy8nU4Gei2CKieQQ6SL4nxHSHIxBw=="
+      },
       "Microsoft.AspNetCore.OpenApi": {
         "type": "Direct",
         "requested": "[9.0.7, )",
