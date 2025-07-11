@@ -12,15 +12,11 @@ using Scalar.AspNetCore;
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
-builder.Services.Configure<MongoDbOptions>(
-    builder.Configuration.GetSection(MongoDbOptions.SectionName)
-);
-
 builder.Services.AddHttpContextAccessor();
 
 builder.Services.AddIpDetection();
 builder.Services.AddKoreaderAuth();
-builder.Services.AddMongoDb(builder.Configuration.GetRequiredSection<MongoDbOptions>());
+builder.Services.AddPersistence(builder.Configuration);
 builder.Services.AddTransient<ISyncService, SyncService>();
 builder.Services.AddTransient<IUserService, UserService>();
 
