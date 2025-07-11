@@ -3,13 +3,13 @@ using System.Linq;
 using System.Threading.Tasks;
 using Kosync.Auth;
 using Kosync.Database.Entities;
+using Kosync.Extensions;
 using Kosync.Models;
 using Kosync.Services;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Routing;
-using Kosync.Extensions;
 
 namespace Kosync.Endpoints.Management;
 
@@ -41,19 +41,15 @@ public static class UserManagementEndpoints
             .WithName("SetUserActiveStatus")
             .WithSummary("Activate or deactivate a user");
 
-        userGroup
-            .MapPut("/password", SetUserPassword)
-            .WithName("SetUserPassword")
-            .WithSummary("Update user password");
+        userGroup.MapPut("/password", SetUserPassword).WithName("SetUserPassword").WithSummary("Update user password");
     }
 
-    private static async Task<
-        Results<Ok<IEnumerable<UserRestrictedResponse>>, ProblemHttpResult>
-    > GetUsers(HttpContext context, IUserService userService)
+    private static async Task<Results<Ok<IEnumerable<UserRestrictedResponse>>, ProblemHttpResult>> GetUsers(
+        HttpContext context,
+        IUserService userService
+    )
     {
-        IEnumerable<UserDocument> users = await userService.GetUserDocumentsAsync(
-            context.RequestAborted
-        );
+        IEnumerable<UserDocument> users = await userService.GetUserDocumentsAsync(context.RequestAborted);
 
         IEnumerable<UserRestrictedResponse> userList = users.Select(u => new UserRestrictedResponse(
             u.Id,
@@ -108,11 +104,7 @@ public static class UserManagementEndpoints
     )
     {
         // admin check
-        await userService.UpdateUserPasswordAsync(
-            username,
-            payload.password,
-            context.RequestAborted
-        );
+        await userService.UpdateUserPasswordAsync(username, payload.password, context.RequestAborted);
         return TypedResults.Ok();
     }
 }

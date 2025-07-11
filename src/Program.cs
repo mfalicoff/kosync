@@ -12,9 +12,7 @@ using Scalar.AspNetCore;
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
-builder.Services.Configure<MongoDbOptions>(
-    builder.Configuration.GetSection(MongoDbOptions.SectionName)
-);
+builder.Services.Configure<MongoDbOptions>(builder.Configuration.GetSection(MongoDbOptions.SectionName));
 
 builder.Services.AddHttpContextAccessor();
 

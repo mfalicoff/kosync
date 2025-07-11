@@ -19,10 +19,7 @@ public interface IKosyncRepository
     Task<DocumentProgress?> GetDocumentAsync(string username, string documentHash);
     Task<bool> RemoveDocumentAsync(string username, string documentHash);
     Task<IEnumerable<DocumentProgress>> GetUserDocumentsAsync(string username);
-    Task<bool> UpdateMultipleDocumentsAsync(
-        string username,
-        Dictionary<string, DocumentProgress> documents
-    );
+    Task<bool> UpdateMultipleDocumentsAsync(string username, Dictionary<string, DocumentProgress> documents);
 
     // Advanced queries
     Task<IEnumerable<UserDocument>> GetUsersWithDocumentAsync(string documentHash);

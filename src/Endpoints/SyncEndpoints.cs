@@ -49,9 +49,7 @@ public static class SyncEndpoints
 
         app.MapGet("/progress/{documentHash}", GetDocumentProgress)
             .WithSummary("Get document reading progress")
-            .WithDescription(
-                "Retrieves the current reading progress and metadata for a specific document"
-            );
+            .WithDescription("Retrieves the current reading progress and metadata for a specific document");
     }
 
     private static async Task<

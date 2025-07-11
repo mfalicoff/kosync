@@ -52,31 +52,24 @@ public static class DocumentManagementEndpoints
                 return TypedResults.BadRequest("User does not exist");
             }
 
-            IEnumerable<DocumentResponse> documents = user.Documents.Values.Select(
-                doc => new DocumentResponse(
-                    doc.DocumentHash,
-                    doc.Progress,
-                    doc.Percentage,
-                    doc.Device,
-                    doc.DeviceId,
-                    doc.Timestamp
-                )
-            );
+            IEnumerable<DocumentResponse> documents = user.Documents.Values.Select(doc => new DocumentResponse(
+                doc.DocumentHash,
+                doc.Progress,
+                doc.Percentage,
+                doc.Device,
+                doc.DeviceId,
+                doc.Timestamp
+            ));
 
             return TypedResults.Ok(documents);
         }
         catch (Exception ex)
         {
-            return TypedResults.Problem(
-                detail: "An error occurred while retrieving user documents",
-                statusCode: 500
-            );
+            return TypedResults.Problem(detail: "An error occurred while retrieving user documents", statusCode: 500);
         }
     }
 
-    private static async Task<
-        Results<Ok, BadRequest<string>, NotFound<string>, ProblemHttpResult>
-    > DeleteUserDocument(
+    private static async Task<Results<Ok, BadRequest<string>, NotFound<string>, ProblemHttpResult>> DeleteUserDocument(
         HttpContext context,
         string username,
         string documentHash,
@@ -106,10 +99,7 @@ public static class DocumentManagementEndpoints
         }
         catch (Exception ex)
         {
-            return TypedResults.Problem(
-                detail: "An error occurred while deleting the document",
-                statusCode: 500
-            );
+            return TypedResults.Problem(detail: "An error occurred while deleting the document", statusCode: 500);
         }
     }
 }

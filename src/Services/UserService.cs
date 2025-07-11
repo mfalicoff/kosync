@@ -10,18 +10,13 @@ using Microsoft.Extensions.Logging;
 
 namespace Kosync.Services;
 
-public class UserService(IKosyncRepository kosyncRepository, ILogger<UserService> logger)
-    : IUserService
+public class UserService(IKosyncRepository kosyncRepository, ILogger<UserService> logger) : IUserService
 {
     private readonly IKosyncRepository _kosyncRepository = kosyncRepository;
 
     private readonly ILogger<UserService> _logger = logger;
 
-    public async Task CreateUserAsync(
-        string username,
-        string password,
-        CancellationToken token = default
-    )
+    public async Task CreateUserAsync(string username, string password, CancellationToken token = default)
     {
         _logger.LogInformation("Creating user with username: {Username}", username);
 
@@ -53,18 +48,12 @@ public class UserService(IKosyncRepository kosyncRepository, ILogger<UserService
         }
     }
 
-    public Task<UserDocument?> GetUserByUsernameAsync(
-        string username,
-        CancellationToken cancellationToken = default
-    )
+    public Task<UserDocument?> GetUserByUsernameAsync(string username, CancellationToken cancellationToken = default)
     {
         return _kosyncRepository.GetUserByUsernameAsync(username);
     }
 
-    public async Task DeleteUserAsync(
-        string username,
-        CancellationToken cancellationToken = default
-    )
+    public async Task DeleteUserAsync(string username, CancellationToken cancellationToken = default)
     {
         _logger.LogInformation("Deleting user with username: {Username}", username);
         UserDocument? user = await _kosyncRepository.GetUserByUsernameAsync(username);
@@ -138,9 +127,7 @@ public class UserService(IKosyncRepository kosyncRepository, ILogger<UserService
         }
     }
 
-    public Task<IEnumerable<UserDocument>> GetUserDocumentsAsync(
-        CancellationToken cancellationToken = default
-    )
+    public Task<IEnumerable<UserDocument>> GetUserDocumentsAsync(CancellationToken cancellationToken = default)
     {
         _logger.LogInformation("Retrieving all user documents");
 

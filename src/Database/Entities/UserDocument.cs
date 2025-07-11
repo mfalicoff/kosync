@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
+
 namespace Kosync.Database.Entities;
 
 public class UserDocument

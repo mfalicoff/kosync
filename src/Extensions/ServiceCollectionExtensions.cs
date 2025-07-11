@@ -23,9 +23,7 @@ public static class ServiceCollectionExtensions
                 options =>
                 {
                     options.AuthHeaderName = AuthenticationSchemes.KoReaderScheme.AuthHeaderName;
-                    options.PasswordHeaderName = AuthenticationSchemes
-                        .KoReaderScheme
-                        .PasswordHeaderName;
+                    options.PasswordHeaderName = AuthenticationSchemes.KoReaderScheme.PasswordHeaderName;
                 }
             );
 
@@ -51,10 +49,7 @@ public static class ServiceCollectionExtensions
         return services;
     }
 
-    public static IServiceCollection AddMongoDb(
-        this IServiceCollection services,
-        MongoDbOptions options
-    )
+    public static IServiceCollection AddMongoDb(this IServiceCollection services, MongoDbOptions options)
     {
         services.AddSingleton<IMongoClient>(_ => new MongoClient(options.ConnectionString));
 
@@ -89,9 +84,7 @@ public static class ServiceCollectionExtensions
                     ',',
                     StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries
                 );
-                string[] validProxies = tempProxies
-                    .Where(p => IPAddress.TryParse(p, out _))
-                    .ToArray();
+                string[] validProxies = tempProxies.Where(p => IPAddress.TryParse(p, out _)).ToArray();
                 options.TrustedProxies = validProxies;
             }
 

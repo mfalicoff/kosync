@@ -34,9 +34,7 @@ public static class AuthEndpoint
             .AllowAnonymous();
     }
 
-    private static Results<Ok<UserAuthResponse>, ProblemHttpResult> AuthoriseUser(
-        HttpContext context
-    )
+    private static Results<Ok<UserAuthResponse>, ProblemHttpResult> AuthoriseUser(HttpContext context)
     {
         return TypedResults.Ok(new UserAuthResponse(context.User.Username()));
     }
@@ -48,11 +46,7 @@ public static class AuthEndpoint
         IUserService userService
     )
     {
-        await userService.CreateUserAsync(
-            payload.username,
-            payload.password,
-            context.RequestAborted
-        );
+        await userService.CreateUserAsync(payload.username, payload.password, context.RequestAborted);
 
         return TypedResults.Created("", new CreateUserResponse(payload.username));
     }

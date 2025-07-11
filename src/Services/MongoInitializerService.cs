@@ -18,8 +18,7 @@ public class MongoDbOptions
     public required string CollectionName { get; init; }
 }
 
-public class MongoInitializerService(IOptions<MongoDbOptions> options, IMongoDatabase database)
-    : IHostedService
+public class MongoInitializerService(IOptions<MongoDbOptions> options, IMongoDatabase database) : IHostedService
 {
     private readonly MongoDbOptions _mongoDbOptions = options.Value;
 
@@ -29,10 +28,7 @@ public class MongoInitializerService(IOptions<MongoDbOptions> options, IMongoDat
         await CreateIndexesAsync(database, cancellationToken);
     }
 
-    private async Task InitializeDatabaseAsync(
-        IMongoDatabase database,
-        CancellationToken cancellationToken
-    )
+    private async Task InitializeDatabaseAsync(IMongoDatabase database, CancellationToken cancellationToken)
     {
         IAsyncCursor<string>? collections = await database.ListCollectionNamesAsync(
             cancellationToken: cancellationToken
@@ -41,25 +37,20 @@ public class MongoInitializerService(IOptions<MongoDbOptions> options, IMongoDat
 
         if (!collectionList.Contains(_mongoDbOptions.CollectionName))
         {
-            await database.CreateCollectionAsync(
-                _mongoDbOptions.CollectionName,
-                cancellationToken: cancellationToken
-            );
+            await database.CreateCollectionAsync(_mongoDbOptions.CollectionName, cancellationToken: cancellationToken);
         }
     }
 
-    private async Task CreateIndexesAsync(
-        IMongoDatabase database,
-        CancellationToken cancellationToken
-    )
+    private async Task CreateIndexesAsync(IMongoDatabase database, CancellationToken cancellationToken)
     {
         IMongoCollection<UserDocument>? usersCollection = database.GetCollection<UserDocument>(
             _mongoDbOptions.CollectionName
         );
 
         // Create unique index on username
-        IndexKeysDefinition<UserDocument>? usernameIndexKeys =
-            Builders<UserDocument>.IndexKeys.Ascending(user => user.Username);
+        IndexKeysDefinition<UserDocument>? usernameIndexKeys = Builders<UserDocument>.IndexKeys.Ascending(user =>
+            user.Username
+        );
         CreateIndexModel<UserDocument> usernameIndexModel = new(
             usernameIndexKeys,
             new CreateIndexOptions { Unique = true, Name = "username_unique" }
@@ -75,8 +66,9 @@ public class MongoInitializerService(IOptions<MongoDbOptions> options, IMongoDat
         );
 
         // Create index for active users
-        IndexKeysDefinition<UserDocument>? activeIndexKeys =
-            Builders<UserDocument>.IndexKeys.Ascending(user => user.IsActive);
+        IndexKeysDefinition<UserDocument>? activeIndexKeys = Builders<UserDocument>.IndexKeys.Ascending(user =>
+            user.IsActive
+        );
         CreateIndexModel<UserDocument> activeIndexModel = new(
             activeIndexKeys,
             new CreateIndexOptions { Name = "is_active" }

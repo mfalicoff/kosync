@@ -9,8 +9,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Kosync.Middleware;
 
-internal sealed class DomainExceptionHandler(ILogger<DomainExceptionHandler> logger)
-    : IExceptionHandler
+internal sealed class DomainExceptionHandler(ILogger<DomainExceptionHandler> logger) : IExceptionHandler
 {
     private readonly ILogger<DomainExceptionHandler> _logger = logger;
 
@@ -25,11 +24,7 @@ internal sealed class DomainExceptionHandler(ILogger<DomainExceptionHandler> log
             return false; // Let the next handler deal with it
         }
 
-        _logger.LogWarning(
-            domainException,
-            "Domain exception occurred: {Message}",
-            domainException.Message
-        );
+        _logger.LogWarning(domainException, "Domain exception occurred: {Message}", domainException.Message);
 
         (int statusCode, string title) = domainException switch
         {

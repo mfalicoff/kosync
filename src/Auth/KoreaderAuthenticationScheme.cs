@@ -44,10 +44,7 @@ public class KoReaderAuthenticationHandler(
             return AuthenticateResult.Fail("Invalid authentication headers");
         }
 
-        UserDocument? user = await _userService.GetUserByUsernameAsync(
-            username,
-            Request.HttpContext.RequestAborted
-        );
+        UserDocument? user = await _userService.GetUserByUsernameAsync(username, Request.HttpContext.RequestAborted);
 
         if (user == null || user.PasswordHash != password)
         {
@@ -58,7 +55,7 @@ public class KoReaderAuthenticationHandler(
         [
             new(ClaimTypes.Name, user.Username),
             new(ClaimTypes.Active, user.IsActive.ToString()),
-            new(ClaimTypes.UserType, user.IsAdministrator ? ClaimTypes.Admin : ClaimTypes.User)
+            new(ClaimTypes.UserType, user.IsAdministrator ? ClaimTypes.Admin : ClaimTypes.User),
         ];
 
         ClaimsIdentity identity = new(claims, Scheme.Name);

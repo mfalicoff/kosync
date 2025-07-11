@@ -6,10 +6,8 @@ using MongoDB.Driver;
 
 namespace Kosync.Database.Entities;
 
-public class KosyncRepository(
-    IMongoCollection<UserDocument> collection,
-    ILogger<KosyncRepository> logger
-) : IKosyncRepository
+public class KosyncRepository(IMongoCollection<UserDocument> collection, ILogger<KosyncRepository> logger)
+    : IKosyncRepository
 {
     private readonly ILogger<KosyncRepository> _logger = logger;
     private readonly IMongoCollection<UserDocument> _users = collection;
@@ -38,8 +36,7 @@ public class KosyncRepository(
             _logger.LogInformation("Created user: {Username}", user.Username);
             return true;
         }
-        catch (MongoWriteException ex)
-            when (ex.WriteError.Category == ServerErrorCategory.DuplicateKey)
+        catch (MongoWriteException ex) when (ex.WriteError.Category == ServerErrorCategory.DuplicateKey)
         {
             _logger.LogWarning("Attempted to create duplicate user: {Username}", user.Username);
             return false;
@@ -69,10 +66,7 @@ public class KosyncRepository(
     // Document operations
     public async Task<bool> AddOrUpdateDocumentAsync(string username, DocumentProgress document)
     {
-        FilterDefinition<UserDocument>? filter = Builders<UserDocument>.Filter.Eq(
-            u => u.Username,
-            username
-        );
+        FilterDefinition<UserDocument>? filter = Builders<UserDocument>.Filter.Eq(u => u.Username, username);
         UpdateDefinition<UserDocument>? update = Builders<UserDocument>.Update.Set(
             $"documents.{document.DocumentHash}",
             document
@@ -81,11 +75,7 @@ public class KosyncRepository(
         UpdateResult? result = await _users.UpdateOneAsync(filter, update);
         if (result.ModifiedCount > 0)
         {
-            _logger.LogDebug(
-                "Updated document {DocumentHash} for user {Username}",
-                document.DocumentHash,
-                username
-            );
+            _logger.LogDebug("Updated document {DocumentHash} for user {Username}", document.DocumentHash, username);
         }
         return result.ModifiedCount > 0;
     }
@@ -98,22 +88,13 @@ public class KosyncRepository(
 
     public async Task<bool> RemoveDocumentAsync(string username, string documentHash)
     {
-        FilterDefinition<UserDocument>? filter = Builders<UserDocument>.Filter.Eq(
-            u => u.Username,
-            username
-        );
-        UpdateDefinition<UserDocument>? update = Builders<UserDocument>.Update.Unset(
-            $"documents.{documentHash}"
-        );
+        FilterDefinition<UserDocument>? filter = Builders<UserDocument>.Filter.Eq(u => u.Username, username);
+        UpdateDefinition<UserDocument>? update = Builders<UserDocument>.Update.Unset($"documents.{documentHash}");
 
         UpdateResult? result = await _users.UpdateOneAsync(filter, update);
         if (result.ModifiedCount > 0)
         {
-            _logger.LogDebug(
-                "Removed document {DocumentHash} for user {Username}",
-                documentHash,
-                username
-            );
+            _logger.LogDebug("Removed document {DocumentHash} for user {Username}", documentHash, username);
         }
         return result.ModifiedCount > 0;
     }
@@ -129,10 +110,7 @@ public class KosyncRepository(
         Dictionary<string, DocumentProgress> documents
     )
     {
-        FilterDefinition<UserDocument>? filter = Builders<UserDocument>.Filter.Eq(
-            u => u.Username,
-            username
-        );
+        FilterDefinition<UserDocument>? filter = Builders<UserDocument>.Filter.Eq(u => u.Username, username);
         UpdateDefinitionBuilder<UserDocument>? updateBuilder = Builders<UserDocument>.Update;
         List<UpdateDefinition<UserDocument>> updates = [];
 
@@ -146,11 +124,7 @@ public class KosyncRepository(
 
         if (result.ModifiedCount > 0)
         {
-            _logger.LogDebug(
-                "Updated {DocumentCount} documents for user {Username}",
-                documents.Count,
-                username
-            );
+            _logger.LogDebug("Updated {DocumentCount} documents for user {Username}", documents.Count, username);
         }
 
         return result.ModifiedCount > 0;
@@ -159,9 +133,7 @@ public class KosyncRepository(
     // Advanced queries
     public async Task<IEnumerable<UserDocument>> GetUsersWithDocumentAsync(string documentHash)
     {
-        FilterDefinition<UserDocument>? filter = Builders<UserDocument>.Filter.Exists(
-            $"documents.{documentHash}"
-        );
+        FilterDefinition<UserDocument>? filter = Builders<UserDocument>.Filter.Exists($"documents.{documentHash}");
         return await _users.Find(filter).ToListAsync();
     }
 
@@ -169,12 +141,8 @@ public class KosyncRepository(
     {
         BsonDocument[] pipeline =
         [
-            BsonDocument.Parse(
-                "{ $project: { documentCount: { $size: { $objectToArray: '$documents' } } } }"
-            ),
-            BsonDocument.Parse(
-                "{ $group: { _id: null, totalDocuments: { $sum: '$documentCount' } } }"
-            ),
+            BsonDocument.Parse("{ $project: { documentCount: { $size: { $objectToArray: '$documents' } } } }"),
+            BsonDocument.Parse("{ $group: { _id: null, totalDocuments: { $sum: '$documentCount' } } }"),
         ];
 
         BsonDocument? result = await _users.Aggregate<BsonDocument>(pipeline).FirstOrDefaultAsync();

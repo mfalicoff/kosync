@@ -70,10 +70,7 @@ public class SyncService(IKosyncRepository repository, ILogger<SyncService> logg
             username
         );
 
-        DocumentProgress? documentProgress = await _repository.GetDocumentAsync(
-            username,
-            documentHash
-        );
+        DocumentProgress? documentProgress = await _repository.GetDocumentAsync(username, documentHash);
 
         if (documentProgress == null)
         {
